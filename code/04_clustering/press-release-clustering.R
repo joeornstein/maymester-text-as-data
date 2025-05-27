@@ -115,7 +115,7 @@ df <- df |>
   left_join(cluster_assignments,
             by = 'id')
 
-# this one should be about security
+# this one should be about partisan taunting
 df |>
   filter(cluster == 1) |>
   slice_sample(n = 1) |>
@@ -139,6 +139,75 @@ df |>
   filter(cluster == 4) |>
   slice_sample(n = 1) |>
   pull(text)
+
+
+## Total within sum of squares is a good metric for how
+## effectively your kmeans clustering explains variation
+## A good rule of thumb when selecting k is to find the "elbow"
+## where adding more clusters doesn't significantly reduce
+## the residual sum of squared distances
+k_values_to_try <- 1:9
+ss <- rep(NA, length(k_values_to_try))
+for(k in k_values_to_try){
+  print(paste0('Trying k = ', k, '...'))
+  km <- kmeans(x = lautenberg_dtm,
+               centers = k,
+               nstart = 100)
+  ss[k] <- km$tot.withinss
+}
+
+ggplot(mapping = aes(x = k_values_to_try,
+                     y = ss)) +
+  geom_point() +
+  geom_line() +
+  labs(x = 'k', y = 'Residual Sum of Squares')
+
+
+## Step 5: Let's try that again, but represent each document with an embedding from OpenAI ------------------
+
+library(fuzzylink)
+openai_api_key("", install = TRUE)
+embeddings <- get_embeddings(df$text)
+
+km <- kmeans(embeddings,
+             centers = 9,
+             nstart = 100)
+
+km$cluster
+
+# assign the clusters to the original dataframe
+df$cluster <- as.numeric(km$cluster)
+
+# a function to get the most over-represented words by cluster
+get_top_words <- function(df, cluster_of_interest, num_words = 10){
+  df |>
+    mutate(in_cluster = if_else(cluster == cluster_of_interest,
+                                'within_cluster', 'outside_cluster')) |>
+    unnest_tokens(output = 'word',
+                  input = 'text') |>
+    # remove stop words
+    anti_join(get_stopwords()) |>
+    # remove numerals
+    filter(str_detect(word, '[0-9]', negate = TRUE)) |>
+    # create word stems
+    mutate(word_stem = wordStem(word)) |>
+    # remove "blank space" token
+    filter(word_stem != '') |>
+    # count the words in each cluster
+    count(in_cluster, word_stem) |>
+    pivot_wider(names_from = 'in_cluster',
+                values_from = 'n',
+                values_fill = 0) |>
+    # compute word shares
+    mutate(within_cluster = within_cluster / sum(within_cluster),
+           outside_cluster = outside_cluster / sum(outside_cluster)) |>
+    mutate(delta = within_cluster - outside_cluster) |>
+    arrange(-delta) |>
+    head(num_words) |>
+    pull(word_stem)
+}
+
+get_top_words(df, 9)
 
 
 ## Step 4: Let's try that again, but using average word embeddings to represent our documents ------------------
