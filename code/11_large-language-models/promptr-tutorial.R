@@ -41,12 +41,52 @@ tweets <- scotus_tweets |>
 
 chats <- lapply(tweets$text,
                 format_chat,
-                instructions = 'The following tweet was posted after the Masterpiece Cakeshop decision, in which the US Supreme Court ruled in favor of a baker who refused to bake a wedding cake for a same-sex couple. Classify the sentiment of this tweet as Positive, Negative, or Neutral.'
+                instructions = 'The following tweet was posted after the Masterpiece Cakeshop decision, in which the US Supreme Court ruled in favor of a baker who refused to bake a wedding cake for a same-sex couple. Return a sentiment classification. Only return the word Positive, Negative, or Netural.'
 )
 chats
 
 responses <- complete_chat(chats,
                            model = 'gpt-4.1')
 
+responses[[1]]
+tweets$text[1]
+
+tweets$gpt_4.1_classification <-
+  responses |>
+  lapply(slice_max,
+         probability,
+         n = 1,
+         with_ties = FALSE) |>
+  lapply(pull,
+         token) |>
+  unlist()
+
+# compare classification on those tweets where 2/3 authors agreed
+tweets <- tweets |>
+  filter(expert1 == expert2 |
+           expert1 == expert3 |
+           expert2 == expert3) |>
+  mutate(human_code = case_when(expert1 == expert2 ~ expert1,
+                                expert1 == expert3 ~ expert1,
+                                expert2 == expert3 ~ expert2)
+  ) |>
+  mutate(human_code = case_when(
+    human_code == -1 ~ 'Negative',
+    human_code == 0 ~ 'Neutral',
+    human_code == 1 ~ 'Positive'
+  ))
+
+table(tweets$human_code,
+      tweets$gpt_4.1_classification)
+
+# what percent of the time did humans and GPT-4.1 agree?
+mean(tweets$human_code == tweets$gpt_4.1_classification)
+
+# as part of our validation test, we want to explore where
+# the humans and the model disagree
+tweets |>
+  filter(gpt_4.1_classification == 'Positive',
+         human_code == 'Negative') |>
+  pull(text)
 
 
