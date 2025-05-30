@@ -52,7 +52,6 @@ mod <- logistic_reg(penalty = 0.003, mixture = 1) |>
   fit(formula = .party ~ .,
       data = train)
 
-
 tidy(mod)
 
 tidy(mod) |>
@@ -176,8 +175,24 @@ ggplot(data = test,
 # but turned out to be a Republican
 test |>
   filter(.pred_D > 0.9, .party == 'R') |>
+  slice_sample(n = 1) |>
   pull(.speech)
 
+test |>
+  filter(.pred_D < 0.1, .party == 'D') |>
+  slice_sample(n = 1) |>
+  pull(.speech)
+
+# predict partisanship in the target test set
+load('data/congressional-floor-speeches/truth.RData')
+embeddings <- get_embeddings(truth$speech)
+colnames(embeddings) <- paste0('dim', 1:ncol(embeddings))
+truth <- bind_cols(truth, embeddings) |>
+  mutate(.party = factor(party))
+
+truth |>
+  bind_cols(predict(mod, truth)) |>
+  accuracy(truth = .party, estimate = .pred_class)
 
 
 ## Fit random forest ------------------
