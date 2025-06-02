@@ -72,6 +72,7 @@ cor(books$score, books$median_human)
 # for each book, let's perform a pairwise comparison with 5
 # other randomly chosen books
 
+set.seed(42)
 # get all possible combinations
 book_combinations <- books$id |>
   combn(m = 2) |>
