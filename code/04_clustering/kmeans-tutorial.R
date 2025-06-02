@@ -16,7 +16,7 @@ ggplot(data = df,
 
 # kmeans is included in the base stats package
 km <- kmeans(x = df,
-             centers = 3)
+             centers = 2)
 
 km
 
@@ -46,7 +46,8 @@ ggplot(data = df,
 # get those three clusters using kmeans
 km <- kmeans(x = df |>
                select(bill_length_mm, flipper_length_mm),
-             centers = 3)
+             centers = 3,
+             nstart = 100)
 df |>
   mutate(cluster_assignment = km$cluster) |>
   ggplot(mapping = aes(x=bill_length_mm, y=flipper_length_mm, color = factor(cluster_assignment))) +

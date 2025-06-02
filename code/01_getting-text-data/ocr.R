@@ -41,10 +41,16 @@ text <- ocr('data/img/russian-fax-machine.png',
             engine = russian)
 
 # it thought that "Panasonic" was "Рапазопс". Let's replace any instance of that.
-text <- str_replace_all(text, 'Рапазопс', 'Panasonic')
+text <- str_replace_all(text,
+                        'Рапазопс.*-Т',
+                        'Panasonic KX-FC965RU-T')
+
+cat(text)
 
 ## 2. Try with some really terrible ones ------------------
 
+
+titanic <- ocr(image = 'data/img/titanic.png')
 
 otago_express <- ocr(image = 'data/img/old_newspaper.jpeg')
 
@@ -125,6 +131,7 @@ text_right <- ocr(page3_right)
 text <- paste(text_left, text_right)
 
 text
+cat(text)
 
 
 

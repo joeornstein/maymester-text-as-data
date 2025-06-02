@@ -4,11 +4,11 @@
 #'
 #' ---
 
-
 library(tidyverse)
 library(tidytext)
 library(sotu)
 library(SnowballC)
+library(wordcloud2)
 
 ## 1. Tokenize to the sentence level ------------------------
 
@@ -20,9 +20,10 @@ sotu_sentences <- df |>
                 input = 'text',
                 token = 'sentences')
 
+# create a unique sentence ID
 sotu_sentences$sentence_id <- 1:nrow(sotu_sentences)
 
-## 2. Identify the sentences that use the word 'manufacturing' ---------
+## 2. Keep only the sentences that use the word 'manufacturing' ---------
 
 sotu_sentences <- sotu_sentences |>
   filter(str_detect(sentence, 'manufactur'))
@@ -30,14 +31,21 @@ sotu_sentences <- sotu_sentences |>
 
 ## 3. Tokenize to the word level -------------------------
 
+# this sequence of operations will produce a
+# dataframe of every word that appears in the
+# same sentence as "manufacturing" in the corpus
 sotu_words <- sotu_sentences |>
   unnest_tokens(input = 'sentence',
                 output = 'word') |>
+  # remove stopwords
   anti_join(get_stopwords()) |>
-  mutate(word_stem = wordStem(word))
+  # convert to word stems
+  mutate(word_stem = wordStem(word)) |>
+  # remove numeric word stems
+  filter(str_detect(word_stem, '[0-9]', negate = TRUE))
 
 
-# look at the frequency distribution of these words so far
+# look at the frequency distribution of these words
 sotu_words |>
   filter(word_stem != 'manufactur') |>
   count(word_stem) |>
@@ -51,33 +59,45 @@ sotu_words <- sotu_words |>
   ungroup()
 
 
-## 4. Word cloud -------------------------
-library(wordcloud2)
+## 4. Create a word cloud -------------------------
 
 sotu_words |>
   filter(word_stem != 'manufactur') |>
   count(word_stem) |>
   wordcloud2()
 
+# only the words that appear at least 10 times:
 sotu_words |>
+  group_by(word_stem) |>
+  filter(n() > 9) |>
+  ungroup() |>
+  filter(word_stem != 'manufactur') |>
+  count(word_stem) |>
+  wordcloud2()
+
+
+sotu_words |>
+  filter(word_stem != 'manufactur') |>
   count(word_stem) |>
   arrange(-n)
 
 
-# compare the 19th century with the 20th century
+# compare the 18th/19th century with the 20th/21st century
 sotu_words |>
   filter(word_stem != 'manufactur') |>
-  group_by(year < 1900) |>
+  mutate(period = if_else(year < 1900,
+                          'Before 1900',
+                          'After 1900')) |>
+  group_by(period) |>
   count(word_stem) |>
-  arrange(-n) |>
   # keep just the top 25 words from each era
   slice_max(n, n = 25) |>
-  # reorder the word_stem variable by frequency so it looks pretty on a chart
-  mutate(word_stem = fct_reorder(word_stem, n)) |>
   # plot it
-  ggplot(mapping = aes(y = word_stem, x = n)) +
+  ggplot(mapping = aes(
+    # reorder the word_stem variable by frequency so it looks pretty on a chart
+    y = reorder_within(word_stem, n, period),
+    x = n)) +
   geom_col() +
-  facet_wrap(~ `year < 1900`, scales = 'free_y')
-
-
-
+  scale_y_reordered() +
+  facet_wrap(~period, scales = 'free') +
+  labs(x = 'Count', y = 'Word Stem')

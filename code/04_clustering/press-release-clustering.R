@@ -115,7 +115,7 @@ df <- df |>
   left_join(cluster_assignments,
             by = 'id')
 
-# this one should be about security
+# this one should be about partisan taunting
 df |>
   filter(cluster == 1) |>
   slice_sample(n = 1) |>
@@ -141,90 +141,60 @@ df |>
   pull(text)
 
 
-## Step 4: Let's try that again, but using average word embeddings to represent our documents ------------------
-
-library(textdata)
-
-# get the glove embedding vectors
-glove <- embedding_glove6b(dimensions = 100)
-
-# convert to a matrix (it will make the computation easier)
-glove_tokens <- glove$token
-
-glove <- glove |>
-  select(-token) |>
-  as.matrix()
-
-rownames(glove) <- glove_tokens
-
-glove[100:120,1:3]
-
-
-# get all the press releases and count up the words for each
-tidy_press_releases <- df |>
-  # get rid of the earlier cluster assignments
-  select(-cluster, -date) |>
-  mutate(text = str_replace_all(text,
-                                pattern = '     Senator Frank R  Lautenberg                                                                                                                      Press Release        of        Senator Lautenberg                                                                                ',
-                                replacement = '')) |>
-  # tokenize to the word level
-  unnest_tokens(input = 'text',
-                output = 'word') |>
-  # remove stop words
-  anti_join(get_stopwords()) |>
-  # remove numerals
-  filter(str_detect(word, '[0-9]', negate = TRUE)) |>
-  # remove single character words
-  filter(nchar(word) != 1) |>
-  # remove the words that aren't in the glove lexicon
-  filter(word %in% glove_tokens)
-
-# matrix called document embeddings
-document_embeddings <- matrix(nrow = 558,
-                              ncol = 100)
-
-for(i in 1:558){
-
-  print(i)
-
-  list_of_words <- tidy_press_releases |>
-    filter(id == i) |>
-    pull(word)
-
-  document_embeddings[i,] <- colMeans(glove[list_of_words,])
-
+## Total within sum of squares is a good metric for how
+## effectively your kmeans clustering explains variation
+## A good rule of thumb when selecting k is to find the "elbow"
+## where adding more clusters doesn't significantly reduce
+## the residual sum of squared distances
+k_values_to_try <- 1:9
+ss <- rep(NA, length(k_values_to_try))
+for(k in k_values_to_try){
+  print(paste0('Trying k = ', k, '...'))
+  km <- kmeans(x = lautenberg_dtm,
+               centers = k,
+               nstart = 100)
+  ss[k] <- km$tot.withinss
 }
 
-# now run k-means on the document embedding vectors
-km <- kmeans(x = document_embeddings,
-             centers = 20,
+ggplot(mapping = aes(x = k_values_to_try,
+                     y = ss)) +
+  geom_point() +
+  geom_line() +
+  labs(x = 'k', y = 'Residual Sum of Squares')
+
+
+## Step 5: Let's try that again, but represent each document with an embedding from OpenAI ------------------
+
+load('data/press-releases/lautenberg.RData')
+library(fuzzylink)
+openai_api_key("", install = TRUE)
+embeddings <- get_embeddings(df$text)
+
+set.seed(42)
+km <- kmeans(embeddings,
+             centers = 9,
              nstart = 100)
 
-table(km$cluster)
+# assign the clusters to the original dataframe
+df$cluster <- as.numeric(km$cluster)
 
-
-# merge the cluster assignments back with the documents
-cluster_assignments <- tibble(id = 1:558,
-                              cluster = km$cluster)
-
-df <- df |>
-  # remove the earlier cluster assignment from bag of words
-  select(-cluster) |>
-  left_join(cluster_assignments,
-            by = 'id')
-
-table(df$cluster)
-
-
-get_top_words <- function(tidy_press_releases, cluster_of_interest){
-  tidy_press_releases |>
-    count(id, word) |>
-    left_join(cluster_assignments, by = 'id') |>
+# a function to get the most over-represented words by cluster
+get_top_words <- function(df, cluster_of_interest, num_words = 10){
+  df |>
     mutate(in_cluster = if_else(cluster == cluster_of_interest,
                                 'within_cluster', 'outside_cluster')) |>
+    unnest_tokens(output = 'word',
+                  input = 'text') |>
+    # remove stop words
+    anti_join(get_stopwords()) |>
+    # remove numerals
+    filter(str_detect(word, '[0-9]', negate = TRUE)) |>
+    # create word stems
+    mutate(word_stem = wordStem(word)) |>
+    # remove "blank space" token
+    filter(word_stem != '') |>
     # count the words in each cluster
-    group_by(in_cluster, word) |>
-    summarize(n = sum(n)) |>
+    count(in_cluster, word_stem) |>
     pivot_wider(names_from = 'in_cluster',
                 values_from = 'n',
                 values_fill = 0) |>
@@ -233,17 +203,23 @@ get_top_words <- function(tidy_press_releases, cluster_of_interest){
            outside_cluster = outside_cluster / sum(outside_cluster)) |>
     mutate(delta = within_cluster - outside_cluster) |>
     arrange(-delta) |>
-    head(10) |>
-    pull(word)
+    head(num_words) |>
+    pull(word_stem)
 }
 
-get_top_words(tidy_press_releases, 1)
-get_top_words(tidy_press_releases, 2)
-get_top_words(tidy_press_releases, 3)
-get_top_words(tidy_press_releases, 4)
-get_top_words(tidy_press_releases, 5)
-get_top_words(tidy_press_releases, 6)
+get_top_words(df, 1) # trains / ports / transportation
+get_top_words(df, 2) # the military / foreign affairs
+get_top_words(df, 3) # terrorism?
+get_top_words(df, 4) # NFL and also courts? and also New Jersey?
+get_top_words(df, 5) # healthcare and health insurance
+get_top_words(df, 6) # environmental protection
+get_top_words(df, 7) # credit claiming for federal funding in New Jersey
+get_top_words(df, 8) # tobacco and firearms; public safety
+get_top_words(df, 9) # taunting President Bush
 
-
-
-
+# validation exercise by drawing random press releases
+# and making sure that they seem to fit with our category labels
+df |>
+  filter(cluster == 2) |>
+  slice_sample(n = 1) |>
+  pull(text)

@@ -1,6 +1,5 @@
 # predicting Trump vs. staff tweets (chapter 23)
 
-
 library(tidyverse)
 library(tidytext)
 library(tidymodels)
@@ -18,7 +17,10 @@ tweets <- trump_tweets_df |>
          .created = created) |>
   extract(.source, '.source', "Twitter for (.*?)<") |>
   filter(.source %in% c('iPhone', 'Android')) |>
-  mutate(.source = factor(.source))
+  mutate(.source = factor(.source)) |>
+  # remove multibyte (non-ASCII) characters
+  mutate(.text = str_remove_all(.text,
+                                "[^\x01-\x7F]"))
 
 # (notice that I'm putting a dot in front of all these
 # column names, on the off chance that words like "source"
@@ -173,6 +175,10 @@ model3 <- logistic_reg(penalty = 0.01, mixture = 1) |>
 
 tidy(model3)
 
+tidy(model3) |>
+  filter(estimate != 0) |>
+  View()
+
 
 # in-sample fit
 train |>
@@ -265,7 +271,8 @@ collect_metrics(lasso_cv)
 
 lasso_specification <- logistic_reg(mode = 'classification',
                                     penalty = tune(),
-                                    mixture = 1)
+                                    mixture = 1) |>
+  set_engine('glmnet')
 
 penalty_grid <- grid_regular(penalty(), levels = 10)
 
@@ -395,3 +402,44 @@ test |>
 
 # Further Reading:
 # http://varianceexplained.org/r/trump-tweets/
+
+
+## Document Embeddings as predictors ------------------------------
+
+library(fuzzylink)
+embeddings <- get_embeddings(tweets$.text)
+colnames(embeddings) <- paste0('dim', 1:256)
+
+tweets <- bind_cols(tweets, embeddings)
+
+# split into train and test sets
+set.seed(42)
+tweet_split <- initial_split(tweets,
+                             prop = 0.8)
+
+train <- training(tweet_split)
+test <- testing(tweet_split)
+
+model4 <- logistic_reg(penalty = 0.01, mixture = 1) |>
+  set_engine('glmnet') |>
+  fit(.source ~ .,
+      data = train |>
+        select(-.id, -.text, -.created))
+
+tidy(model4)
+tidy(model4) |> filter(estimate != 0) |> nrow()
+
+# in-sample fit
+train |>
+  bind_cols(predict(model4, train)) |>
+  accuracy(truth = .source, estimate = .pred_class)
+
+# out-of-sample fit
+test |>
+  bind_cols(predict(model4, test)) |>
+  accuracy(truth = .source, estimate = .pred_class)
+
+test |>
+  bind_cols(predict(model4, test)) |>
+  conf_mat(truth = .source, estimate = .pred_class) |>
+  autoplot(type = 'heatmap')
