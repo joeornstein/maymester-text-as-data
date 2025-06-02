@@ -12,4 +12,4 @@ d <- left_join(human_codes, goodreads |>
                  select(id = workid, text),
                by = 'id')
 
-write_csv(goodreads, file = 'data/goodreads/cleaned-data.csv')
+write_csv(d, file = 'data/goodreads/cleaned-data.csv')
