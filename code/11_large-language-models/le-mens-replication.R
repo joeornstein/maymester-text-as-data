@@ -14,7 +14,7 @@ prompt_instructions
 
 # create a version of the dataset with one row per book
 books <- d |>
-  select(id, text) |>
+  select(id, text, category) |>
   unique() |>
   mutate(prompt = glue(prompt_instructions))
 
@@ -87,7 +87,7 @@ book_combinations <- books$id |>
   as_tibble() |>
   # for each book in column one, pick 20 random books to pair it with
   group_by(V1) |>
-  slice_sample(n = 20) |>
+  slice_sample(n = 5) |>
   # merge the text
   left_join(
     books |>
@@ -123,12 +123,12 @@ prompts <- book_combinations$prompt |>
 # GPT-4.1-mini with 20 comparisons per book:
 # runtime: estimated 3h
 # cost: estimated $3.20
-from_file <- FALSE
+from_file <- TRUE
 if(!from_file){
-  resp <- complete_chat(prompts, model = 'gpt-4.1-mini')
-  save(resp, book_combinations, file = 'data/goodreads/book-comparisons-gpt-4.1-mini.RData')
+  resp <- complete_chat(prompts, model = 'gpt-4.1')
+  save(resp, book_combinations, file = 'data/goodreads/book-comparisons-gpt-4.1.RData')
 } else{
-  load('data/goodreads/book-comparisons-gpt-4.1-mini.RData')
+  load('data/goodreads/book-comparisons-gpt-4.1.RData')
 }
 
 # assign pairwise comparison labels
@@ -187,3 +187,34 @@ df |>
 # and it *never* wins a pairwise comparison, so why is it given a middling score?
 # seems like the problem is the confidence intervals. just too wide.
 # not enough comparisons made....
+
+
+
+
+## Embeddings Approach -----------------------
+
+load("~/teaching/maymester-text-as-data/data/goodreads/embeddings.RData")
+
+# let's pick 10 book descriptions that we think are typical of mystery novels
+typical_mysteries <- c('12113284', '14404989', '20074403', '25314657',
+                       '509340', '2698189', '48405499', '14331118',
+                       '21997606', '2430165')
+
+typical_mystery_embeddings <- embeddings[which(books$id %in% typical_mysteries),]
+
+# for each of the 1,000 observations in our dataset
+# compute cosine similarity with these typical mystery novels
+cosine_similarities <- embeddings %*% t(typical_mystery_embeddings)
+
+# for all 1,000 books, compute the average cosine similarity to
+# those typical books. That will be our "mysteryness" score
+books$score <- rowMeans(cosine_similarities)
+
+ggplot(data = books,
+       mapping = aes(x = median_human,
+                     y = score)) +
+  geom_point(alpha = 0.5) +
+  theme_bw() +
+  labs(x = 'Median Human Typicality Score',
+       y = 'Average Cosine Similarity with Typical Mystery Novels')
+cor(books$median_human, books$score)
