@@ -23,8 +23,14 @@ books <- d |>
 prompts <- books$prompt |>
   lapply(format_chat)
 
-resp <- complete_chat(prompts, model = 'gpt-4.1')
-save(resp, file = 'data/goodreads/books-gpt-4.1.RData')
+from_file <- TRUE
+if(!from_file){
+  resp <- complete_chat(prompts, model = 'gpt-4.1')
+  save(resp, file = 'data/goodreads/books-gpt-4.1.RData')
+} else{
+  load('data/goodreads/books-gpt-4.1.RData')
+}
+
 
 # for each book, the score will be a probability-weighted average response
 books$score <- resp |>
@@ -79,9 +85,9 @@ book_combinations <- books$id |>
   # transpose
   t() |>
   as_tibble() |>
-  # for each book in column one, pick 5 random books
+  # for each book in column one, pick 20 random books to pair it with
   group_by(V1) |>
-  slice_sample(n = 5) |>
+  slice_sample(n = 20) |>
   # merge the text
   left_join(
     books |>
@@ -92,7 +98,12 @@ book_combinations <- books$id |>
     books |>
       select(V2 = id,
              text2 = text)
-  )
+  ) |>
+  # remove any duplicate pairs (V1 and V2 swapped)
+  mutate(min_id = pmin(V1, V2),
+         max_id = pmax(V1, V2)) |>
+  distinct(min_id, max_id, .keep_all = TRUE) |>
+  select(-min_id, -max_id)
 
 
 # create prompts
@@ -105,8 +116,20 @@ book_combinations <- book_combinations |>
 prompts <- book_combinations$prompt |>
   lapply(format_chat)
 
-resp <- complete_chat(prompts, model = 'gpt-4.1')
-save(resp, file = 'data/goodreads/book-comparisons-gpt-4.1.RData')
+# GPT-4.1 with 5 comparisons per book:
+# runtime: approximately 30 minutes
+# cost: approximately $4.08
+
+# GPT-4.1-mini with 20 comparisons per book:
+# runtime: estimated 3h
+# cost: estimated $3.20
+from_file <- FALSE
+if(!from_file){
+  resp <- complete_chat(prompts, model = 'gpt-4.1-mini')
+  save(resp, book_combinations, file = 'data/goodreads/book-comparisons-gpt-4.1-mini.RData')
+} else{
+  load('data/goodreads/book-comparisons-gpt-4.1-mini.RData')
+}
 
 # assign pairwise comparison labels
 book_combinations$winner <- resp |>
@@ -122,7 +145,45 @@ book_combinations <- book_combinations |>
 
 library(BradleyTerry2)
 
-mod <- BTm(outcome = result,
-           player1 = factor(V1, levels = books$id),
-           player2 = factor(V2, levels = books$id),
-           data = book_combinations)
+# runtime: approximately 1 minute
+mod <- BTm(
+  # outcome = 1 if book 1 wins and 0 if book 2 wins
+  outcome = result,
+  # the player1 and player2 variables must be factors with shared levels
+  player1 = factor(V1, levels = books$id),
+  player2 = factor(V2, levels = books$id),
+  data = book_combinations
+  )
+
+# extract scores
+bt_scores <- summary(mod)$coefficients |>
+  as_tibble() |>
+  mutate(id = mod$coefficients |>
+           names() |>
+           str_remove_all('\\.\\.') |>
+           as.numeric())
+
+df <- books |>
+  left_join(bt_scores, by = 'id')
+
+ggplot(data = df,
+       mapping = aes(x = median_human,
+                     y = Estimate)) +
+  geom_point(alpha = 0.5) +
+  labs(x = 'Median Human Typicality Score',
+       y = 'GPT-4.1 Pairwise Comparison Score') +
+  theme_bw()
+
+cor(df$Estimate, df$median_human, use = 'pairwise.complete.obs')
+
+# clearly that's a more continuous score! But whereas
+# the previous GPT-4.1 clustered too much at 10 and 85,
+# this one appears to be unreasonably clustered around 0.
+df |>
+  filter(Estimate > 0 & median_human == 0) |>
+  pull(text)
+
+# this is a weird one; clearly the crochet book is not a mystery novel,
+# and it *never* wins a pairwise comparison, so why is it given a middling score?
+# seems like the problem is the confidence intervals. just too wide.
+# not enough comparisons made....
