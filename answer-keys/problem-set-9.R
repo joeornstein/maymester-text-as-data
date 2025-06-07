@@ -21,18 +21,26 @@ if(!from_file){
 dim(embeddings)
 
 # representative texts for "maximal punishment"
-target_ids <- c(437, 579, 23, 392, 637, 1122, 1008, 336, 635, 815)
-target <- embeddings[target_ids,]
+punitive_ids <- c(437, 579, 23, 392, 637, 1122, 1008, 336, 635, 815)
+target1 <- embeddings[punitive_ids,]
 
-sims <- embeddings %*% t(target)
+# representative texts for "no prison"
+lenient_ids <- c(1e3, 440, 687, 329, 1144, 218, 370, 446, 1015, 970, 612)
+target0 <- embeddings[lenient_ids,]
 
-d$score <- rowMeans(sims)
+sims1 <- embeddings %*% t(target1)
+sims0 <- embeddings %*% t(target0)
+
+d$score1 <- rowMeans(sims1)
+d$score0 <- rowMeans(sims0)
+d$score <- d$score1 - d$score0
+d$score_sum <- d$score1 + d$score0
 
 # remove the most irrelevant responses
 d <- d |>
-  filter(score >= 0.22)
+  filter(score_sum >= 0.4)
 
-ggplot(data = d |> filter(score>0.2),
+ggplot(data = d,
        mapping = aes(x = score,
                      fill = if_else(treat == 1, 'Treated', 'Control'))) +
   geom_density(alpha = 0.5) +
@@ -53,17 +61,16 @@ summary(d$score)
 sd(d$score)
 mean(d$score)
 
-# treatment increases punitiveness score by nearly a full standard deviation
+# treatment increases punitiveness score a full standard deviation
 # on average
 
 
-
 ## K-means cluster the embeddings to discover different topics -------------
-load('answer-keys/problem-set-9.RData')
-set.seed(42)
-km <- kmeans(embeddings, centers = 10)
-table(km$cluster)
-d$cluster <- km$cluster
+# load('answer-keys/problem-set-9.RData')
+# set.seed(42)
+# km <- kmeans(embeddings, centers = 10)
+# table(km$cluster)
+# d$cluster <- km$cluster
 
 # Cluster 1 = "no prison, deport"
 # Cluster 2 = not cohesive
