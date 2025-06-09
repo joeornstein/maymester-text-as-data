@@ -36,9 +36,18 @@ d$score0 <- rowMeans(sims0)
 d$score <- d$score1 - d$score0
 d$score_sum <- d$score1 + d$score0
 
+# another approach: affine transformation, projecting onto the
+# vector x_r - x_l
+scale_vector <- colMeans(target1) - colMeans(target0)
+y_rel <- embeddings - colMeans(target0)
+d$projection <- (y_rel %*% scale_vector) / sum(scale_vector^2)^2
+
 # remove the most irrelevant responses
 d <- d |>
   filter(score_sum >= 0.4)
+
+plot(d$projection, d$score)
+cor(d$projection, d$score)
 
 ggplot(data = d,
        mapping = aes(x = score,
