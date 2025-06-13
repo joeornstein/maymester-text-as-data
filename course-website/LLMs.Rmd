@@ -31,7 +31,7 @@ install.packages('promptr')
 
 Next, you will need an account with OpenAI. You can sign up for one [here](https://platform.openai.com/signup), after which you will need to generate an API key [here](https://platform.openai.com/account/api-keys). I recommend adding this [API key](APIs.html) as a variable in your operating system environment called `OPENAI_API_KEY`; that way you won't risk leaking it by hard-coding it into your `R` scripts. The `promptr` package will automatically look for your API key under that variable name, and will prompt you to enter the API key manually if it can't find one there. The easiest way to do so is by copy-pasting your API key into the following line of code:
 
-```
+```         
 promptr::openai_api_key('<YOUR KEY GOES HERE>', install = TRUE)
 ```
 
@@ -293,7 +293,7 @@ load('data/gpt-3-outputs/full_pipe.RData')
 full_pipe
 ```
 
-With these elements in place, let's loop through the `scotus_tweets` dataset and estimate sentiment scores for each tweet referencing Masterpiece Cakeshop. **Be mindful before you run this code.** At [current prices](https://openai.com/api/pricing/), OpenAI will charge \$1.50 per million input toikens, which works out to approximately 1/30 of a cent per prompt, for a total of $0.30 if you classify all 945 tweets.
+With these elements in place, let's loop through the `scotus_tweets` dataset and estimate sentiment scores for each tweet referencing Masterpiece Cakeshop. **Be mindful before you run this code.** At [current prices](https://openai.com/api/pricing/), OpenAI will charge \$1.50 per million input toikens, which works out to approximately 1/30 of a cent per prompt, for a total of \$0.30 if you classify all 945 tweets.
 
 Let's create a formatted few-shot prompt for each tweet about the Masterpiece Cakeshop decision, and return the sentiment score for each.
 
@@ -466,7 +466,3 @@ df
 1.  Take a sample of the Senate press releases from the [clustering tutorial](clustering.html). Format a few-shot ChatGPT prompt that returns a list of topics. Are the topic labels sensible? Are they similar to what we came up with using unsupervised methods?
 
 2.  Ask ChatGPT to summarize the remarks on pages 4-5 of the [PDF](img/SOJ.pdf) that you imported in the [OCR practice problems](OCR.html).
-
-## Further Reading
-
-- Ornstein, Blasingame, and Truscott (2025). "How to Train Your Stochastic Parrot: Large Language Models for Political Texts". *Political Science Research & Methods*. [Link](https://www.cambridge.org/core/journals/political-science-research-and-methods/article/how-to-train-your-stochastic-parrot-large-language-models-for-political-texts/8EAA8096779B5C9DDBDF1BFC71C63AEC)
