@@ -9,55 +9,49 @@ bibliography: references.bib
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
-**Note (7/30/2024):** I have developed a new `R` package ([promptr](https://github.com/joeornstein/promptr)) with improved functionality for many of the tasks I perform with the `text2data` on this page. All the code here should still work, but I encourage you to check out the new package!
-
-Large language models (LLMs) have transformed the way computer scientists approach natural language processing over the past five years. These models, trained to predict the next word in a sequence, make use of a massive quantity of text data from the Internet and digitized books. In this tutorial, I will hand-wave over exactly *how* LLMs perform this task, focusing instead on how to adapt such models for use in social science applications. If you are interested in what's going on under the hood, I highly recommend the following two blog posts for not-too-technical introductions:
+Large language models (LLMs) have transformed the way computer scientists approach natural language processing over the past decade. These models, trained to predict the next word in a sequence, make use of a massive quantity of text data from the Internet and digitized books. In this tutorial, I will hand-wave over exactly *how* LLMs perform this task, focusing instead on how to adapt such models for use in social science applications. If you are interested in what's going on under the hood, I highly recommend the following two blog posts for not-too-technical introductions:
 
 -   [The GPT-3 Architecture, on a Napkin](https://dugas.ch/artificial_curiosity/GPT_architecture.html)
 
--   [Large language models, explained with a minimum of math and jargon](https://www.understandingai.org/p/large-language-models-explained-with).
+-   [Large language models, explained with a minimum of math and jargon](https://www.understandingai.org/p/large-language-models-explained-with)
 
 In a nutshell, LLMs represent words using [embeddings](word-embeddings.html), and are trained to predict the most likely next word in a sequence using a model architecture called the **transformer** [@vaswaniAttentionAllYou2017]. A powerful feature of this type of model is that the embeddings representing the input sequence are iteratively updated based on which words appear nearby (a process called **self-attention**). This allows an LLM to flexibly represent words based on their context, which is useful in cases where the same word can mean different things in different contexts. For example, an LLM will represent the word "bill" differently depending on whether it appears in the phrase "sign the bill", "foot the bill", or "Hillary and Bill".
 
-What's remarkable is that if we have a model that is sufficiently good at predicting the next word in a sequence, we can *adapt* it to perform all sorts of text-as-data tasks, by creating a prompt that converts our desired task into a next-word prediction problem [@ornsteinHowTrainYour2022]. To show you how, we will use the `text2data` R package to create LLM prompts and submit them to OpenAI's GPT-3.[^1] Let's start by getting the R package set up.
+What's remarkable is that if we have a model that is sufficiently good at predicting the next word in a sequence, we can *adapt* it to perform all sorts of text-as-data tasks, by creating a prompt that converts our desired task into a next-word prediction problem [@ornsteinHowTrainYour2025]. To show you how, we will use my `promptr` R package to create LLM prompts and submit them to OpenAI's language models.[^1] Let's start by getting the R package set up.
 
-[^1]: Like many others, I have qualms about using proprietary, closed-source models for scientific research [@spirlingWhyOpensourceGenerative2023]. But as of summer 2023 the ease-of-use and capabilities of OpenAI's models are sufficiently beyond those of similar open-source models that it makes sense to start here. I will update both this page and the R package when I have identified a suitable set of open-source alternatives.
+[^1]: Like many others, I have qualms about using proprietary, closed-source models for scientific research [@spirlingWhyOpensourceGenerative2023]. But as of summer 2025 the ease-of-use and capabilities of OpenAI's models are sufficiently beyond those of similar open-source models that it makes sense to start here.
 
-## Setting Up The `text2data` Package
+## Setting Up The `promptr` Package
 
-The package is currently available as a GitHub repository. To install, first make sure you have the `devtools` package available, then you can install the package with the following line of code:
-
-```{r, eval = FALSE}
-devtools::install_github('joeornstein/text2data')
-```
-
-If you have not yet installed Python and the `reticulate` package on your computer, follow the instructions for doing so [here](APIs.html#How%20to%20Drive%20Python%20from%20RStudio). Once that step is complete, you can set up OpenAI's Python module using the `setup_openai()` function, which will allow you to submit prompts to the GPT-3 API.
+The package is currently available on CRAN. You can install with the following line of code:
 
 ```{r, eval = FALSE}
-library(text2data)
-
-setup_openai()
+install.packages('promptr')
 ```
 
-Next, you will need an account with OpenAI. You can sign up for one [here](https://platform.openai.com/signup), after which you will need to generate an API key [here](https://platform.openai.com/account/api-keys). I recommend adding this [API key](APIs.html) as a variable in your operating system environment called `OPENAI_API_KEY`; that way you won't risk leaking it by hard-coding it into your `R` scripts. The `text2data` package will automatically look for your API key under that variable name, and will prompt you to enter the API key manually if it can't find one there. If you're unfamiliar with setting Environment Variables in your operating system, [here](https://dev.to/biplov/handling-passwords-and-secret-keys-using-environment-variables-2ei0) are some helpful instructions. Note that you may need to restart your computer after completing this step.
+Next, you will need an account with OpenAI. You can sign up for one [here](https://platform.openai.com/signup), after which you will need to generate an API key [here](https://platform.openai.com/account/api-keys). I recommend adding this [API key](APIs.html) as a variable in your operating system environment called `OPENAI_API_KEY`; that way you won't risk leaking it by hard-coding it into your `R` scripts. The `promptr` package will automatically look for your API key under that variable name, and will prompt you to enter the API key manually if it can't find one there. The easiest way to do so is by copy-pasting your API key into the following line of code:
 
-When the setup is complete, we can begin.
+```
+promptr::openai_api_key('<YOUR KEY GOES HERE>', install = TRUE)
+```
+
+Once you've done this you may need to restart your R session. Once you've done that, we can begin.
 
 ## Completing Prompts
 
-The workhorse function of the `text2data` package is `complete_prompt()`. This function submits a sequence of words (the prompt) to the OpenAI API, and returns a dataframe with the five highest-probability next word predictions and their associated probabilities.[^2]
+The workhorse function of the `promptr` package is `complete_prompt()`. This function submits a sequence of words (the prompt) to the OpenAI API, and returns a dataframe with the five highest-probability next word predictions and their associated probabilities.[^2]
 
-[^2]: Note that the default model used by `complete_prompt()` is "davinci-002", the 175-billion parameter base GPT-3 model. You can prompt different model variants using the `model` argument.
+[^2]: Note that the default model used by `complete_prompt()` is "gpt-3.5-turbo-instruct", essentially the model underlying the original ChatGPT. You can prompt different model variants using the `model` argument.
 
 ```{r, echo = TRUE, eval = FALSE}
-library(text2data)
+library(promptr)
 
 complete_prompt(prompt = 'My favorite food is')
 ```
 
 ```{r, echo = FALSE, eval = FALSE}
 # NOTE: Throughout I'm saving the GPT-3 outputs to file so it's not re-running every time I knit the website
-library(text2data)
+library(promptr)
 
 food1 <- complete_prompt(prompt = 'My favorite food is')
 
@@ -65,7 +59,7 @@ save(food1, file = 'data/gpt-3-outputs/food1.RData')
 ```
 
 ```{r, echo = FALSE, eval = TRUE}
-library(text2data)
+library(promptr)
 
 load('data/gpt-3-outputs/food1.RData')
 
@@ -92,7 +86,7 @@ load('data/gpt-3-outputs/food2.RData')
 food2
 ```
 
-If we want GPT-3 to perform a classification task, we can structure the prompt so that the best next-word prediction is the classification we want (a process called **adaptation**). Consider, for example, the following prompt.
+If we want thr LLM to perform a classification task, we can structure the prompt so that the best next-word prediction is the classification we want (a process called **adaptation**). Consider, for example, the following prompt.
 
 ```{r}
 prompt <- 'Decide whether the following statement is happy, sad, or neither.\n\nText: I feel happy.\nClassification:'
@@ -148,12 +142,12 @@ cat2
 
 ## Formatting Prompts
 
-Manually typing prompts with multiple few-shot examples can be tedious and error-prone, particularly when performing the sort of context-specific prompting we recommend in our paper [@ornsteinHowTrainYour2022]. The `format_prompt()` function is a useful tool to aid in that process.
+Manually typing prompts with multiple few-shot examples can be tedious and error-prone, particularly when performing the sort of context-specific prompting we recommend in our paper [@ornsteinHowTrainYour2025]. The `format_prompt()` function is a useful tool to aid in that process.
 
 The function is designed with classification problems in mind. If you input the text you would like to classify along with a set of instructions, the default prompt template looks like this:
 
 ```{r}
-library(text2data)
+library(promptr)
 
 format_prompt(text = 'I am feeling happy today.',
               instructions = 'Decide whether this statment is happy, sad, or neither.')
@@ -167,7 +161,7 @@ format_prompt(text = 'I am feeling happy today.',
               template = 'Statement: {text}\nSentiment: {label}')
 ```
 
-This is particularly useful when including few-shot examples in the prompt. If you input these examples as a tidy dataframe with the columns `text` and `label`, the `format_prompt()` function will paste them into the prompt them according to the template. To illustrate, let's classify the sentiment of a set of tweets about the Supreme Court of the United States, a dataset which is included with the `text2data` package.
+This is particularly useful when including few-shot examples in the prompt. If you input these examples as a tidy dataframe with the columns `text` and `label`, the `format_prompt()` function will paste them into the prompt them according to the template. To illustrate, let's classify the sentiment of a set of tweets about the Supreme Court of the United States, a dataset which is included with the `promptr` package.
 
 ## Classifying Documents
 
@@ -253,22 +247,22 @@ cat(prompt)
 Next, we'll create a function that takes the dataframe of next-word predictions from GPT-3 and converts it into a measure of sentiment. For this tutorial, our measure will be $P(\text{positive}) - P(\text{negative})$.
 
 ```{r}
-gpt3_sentiment_score <- function(df){
+sentiment_score <- function(df){
   
   p_positive <- df |> 
     # put responses in all caps
-    mutate(response = str_to_upper(response)) |> 
+    mutate(response = str_to_upper(token)) |> 
     # keep and sum probabilities assigned to "POS"
     filter(str_detect(response, 'POS')) |> 
-    pull(prob) |> 
+    pull(probability) |> 
     sum()
   
   p_negative <- df |> 
     # put responses in all caps
-    mutate(response = str_to_upper(response)) |> 
+    mutate(response = str_to_upper(token)) |> 
     # keep and sum probabilities assigned to "NEG"
     filter(str_detect(response, 'NEG')) |> 
-    pull(prob) |> 
+    pull(probability) |> 
     sum()
   
   return(p_positive - p_negative)
@@ -281,14 +275,14 @@ We can add this function to the end of the pipeline we developed before.
 prompt |> 
   glue() |> 
   complete_prompt() |> 
-  gpt3_sentiment_score()
+  sentiment_score()
 ```
 
 ```{r, echo = FALSE, eval = FALSE}
 full_pipe <- prompt |> 
   glue() |> 
   complete_prompt() |> 
-  gpt3_sentiment_score()
+  sentiment_score()
 
 save(full_pipe, file = 'data/gpt-3-outputs/full_pipe.RData')
 ```
@@ -299,47 +293,65 @@ load('data/gpt-3-outputs/full_pipe.RData')
 full_pipe
 ```
 
-With these elements in place, let's loop through the `scotus_tweets` dataset and estimate sentiment scores for each tweet referencing Masterpiece Cakeshop. **Be mindful before you run this code.** At [current prices](https://openai.com/pricing), OpenAI will charge approximately 0.07 cents per prompt, for a total of $0.65 if you classify all 945 tweets.
+With these elements in place, let's loop through the `scotus_tweets` dataset and estimate sentiment scores for each tweet referencing Masterpiece Cakeshop. **Be mindful before you run this code.** At [current prices](https://openai.com/api/pricing/), OpenAI will charge \$1.50 per million input toikens, which works out to approximately 1/30 of a cent per prompt, for a total of $0.30 if you classify all 945 tweets.
+
+Let's create a formatted few-shot prompt for each tweet about the Masterpiece Cakeshop decision, and return the sentiment score for each.
 
 ```{r, echo = TRUE, eval = FALSE}
-scotus_tweets$gpt3_sentiment <- NA
+masterpiece_tweets <- scotus_tweets |> 
+  filter(case == 'masterpiece')
 
-for(i in 1:nrow(scotus_tweets)){
-  
-  # skip the non-masterpiece tweets
-  if(scotus_tweets$case[i] != 'masterpiece'){
-    next
-  }
-  
-  # get the tweet text
-  TWEET <- scotus_tweets$text[i]
-  
-  # format the prompt, send it to GPT-3, and construct the sentiment measure 
-  scotus_tweets$gpt3_sentiment[i] <- prompt |> 
-    glue() |> 
-    complete_prompt() |> 
-    gpt3_sentiment_score()
-  
-}
+instructions <- 'Read these tweets posted the day after the US Supreme Court ruled in favor of a baker who refused to bake a wedding cake for a same-sex couple (Masterpiece Cakeshop, 2018). For each tweet, decide whether its sentiment is Positive, Neutral, or Negative.'
+
+masterpiece_examples <- scotus_tweets_examples |> 
+  filter(case == 'masterpiece')
+
+masterpiece_tweets$prompt <- format_prompt(text = masterpiece_tweets$text,
+                                           instructions = instructions,
+                                           examples = masterpiece_examples)
+
+masterpiece_tweets$prompt[3]
 ```
 
-```{r, echo = FALSE, eval = FALSE}
-save(scotus_tweets, file = 'data/gpt-3-outputs/scotus_classified.RData')
+Now submit the entire list of prompts to `complete_prompt()`:
+
+```{r echo = TRUE, eval = FALSE}
+masterpiece_tweets$out <- complete_prompt(masterpiece_tweets$prompt)
 ```
 
-```{r, echo = FALSE, eval = TRUE}
-load('data/gpt-3-outputs/scotus_classified.RData')
+```{r echo = FALSE, eval = FALSE}
+masterpiece_tweets$out <- NA
+masterpiece_tweets$out[1:200] <- complete_prompt(masterpiece_tweets$prompt[1:200])
+masterpiece_tweets$out[201:423] <- complete_prompt(masterpiece_tweets$prompt[201:423])
+
+save(masterpiece_tweets, file = 'data/gpt-3-outputs/masterpiece.RData')
 ```
 
-Plotting those sentiment scores against the average of the hand-coded scores, we can see that this measure is much better than the one from the [dictionary method](sentiment-analysis.html) we tried before. The correlation between the two scores is `r cor((scotus_tweets$expert1 + scotus_tweets$expert2 + scotus_tweets$expert3) / 3, scotus_tweets$gpt3_sentiment, use = 'pairwise.complete.obs') |> round(2)`.
+```{r echo = FALSE, eval = TRUE}
+load('data/gpt-3-outputs/masterpiece.RData')
+```
+
+The estimated probability distribution for each completion is now a list of dataframes in the `out` column. We can compute our sentiment score for each one:
 
 ```{r}
-ggplot(data = scotus_tweets,
+masterpiece_tweets$score <- masterpiece_tweets$out |> 
+  lapply(mutate, token = str_to_lower(token)) |> 
+  lapply(summarize, 
+         positive = sum(probability[token=='positive']), 
+         negative = sum(probability[token=='negative'])) |>
+  lapply(summarize,score=positive-negative) |> 
+  unlist()
+```
+
+Plotting those sentiment scores against the average of the hand-coded scores, we can see that this measure is much better than the one from the [dictionary method](sentiment-analysis.html) we tried before. The correlation between the two scores is `r cor((masterpiece_tweets$expert1 + masterpiece_tweets$expert2 + masterpiece_tweets$expert3) / 3, masterpiece_tweets$score, use = 'pairwise.complete.obs') |> round(2)`.
+
+```{r}
+ggplot(data = masterpiece_tweets,
        mapping = aes(x = (expert1 + expert2 + expert3) / 3,
-                     y = gpt3_sentiment)) +
+                     y = score)) +
   geom_jitter(width = 0.1) +
   labs(x = 'Hand-Coded Sentiment Score',
-       y = 'GPT-3 Sentiment Score') +
+       y = 'GPT-3.5 Sentiment Score') +
   theme_minimal()
 ```
 
@@ -352,7 +364,7 @@ In the [OCR tutorial](OCR.html), we worked with a newspaper clipping about the s
 ```{r}
 library(tesseract)
 library(magick)
-library(text2data)
+library(promptr)
 
 image <- image_read('img/titanic.png')
 image
@@ -377,12 +389,12 @@ text <- ocr(first_column)
 cat(text)
 ```
 
-As is common with OCR, the result is generally quite good, but not perfect. Notice, for example, the phrases "reused tu recusiiee ce", "lif¢-boats", and "Ti-,'sanic's". Look closely at the letters in the image above to see how the OCR algorithm may have made those mistakes. When you consider the image letter-by-letter, ignoring the semantic context in which those letters are placed, it is easy to mistake some letters for others. But when humans read a passage like this, they're not reading it letter-by-letter. Instead, fluent readers learn to recognize whole words at a time, using their knowledge of the language to "predict" what the constituent letters of a word must be, even when they are difficult to make out on the page. In the same way, we can make use of the fact that GPT-3 is very good at predicting words in sequences to impute what the phrase "reused tu recusiiee ce" is likely to have been, given the context.
+As is common with OCR, the result is generally quite good, but not perfect. Notice, for example, the phrases "reused tu recusiiee ce", "lif¢-boats", and "Ti-,'sanic's". Look closely at the letters in the image above to see how the OCR algorithm may have made those mistakes. When you consider the image letter-by-letter, ignoring the semantic context in which those letters are placed, it is easy to mistake some letters for others. But when humans read a passage like this, they're not reading it letter-by-letter. Instead, fluent readers learn to recognize whole words at a time, using their knowledge of the language to "predict" what the constituent letters of a word must be, even when they are difficult to make out on the page. In the same way, we can make use of the fact that LLMs are very good at predicting words in sequences to impute what the phrase "reused tu recusiiee ce" is likely to have been, given the context.
 
-To do so, we can prompt GPT-3 like so:
+To do so, we can prompt the LLM like so:
 
 ```{r}
-prompt <- glue('Create a copy of the following passage, correcting any OCR errors.\n---\nOriginal Passage:\n\n{text}\n---\nCorrected Passage:\n\n')
+prompt <- glue('Correct OCR errors in the following passage.\n---\nOriginal Passage:\n\n{text}\n---\nCorrected Passage:\n\n')
 
 cat(prompt)
 ```
@@ -390,8 +402,7 @@ cat(prompt)
 ```{r, echo = TRUE, eval = FALSE}
 cleaned_text <- complete_prompt(
   prompt = prompt,
-  max_tokens = nchar(text),
-  model = 'gpt-3.5-turbo')
+  max_tokens = nchar(text))
 
 cat(cleaned_text)
 ```
@@ -399,8 +410,7 @@ cat(cleaned_text)
 ```{r, echo = FALSE, eval = FALSE}
 cleaned_text <- complete_prompt(
   prompt = prompt,
-  max_tokens = nchar(text),
-  model = 'gpt-3.5-turbo')
+  max_tokens = nchar(text))
 
 save(cleaned_text, file = 'data/gpt-3-outputs/titanic_clean.RData')
 ```
@@ -411,26 +421,7 @@ load('data/gpt-3-outputs/titanic_clean.RData')
 cat(cleaned_text)
 ```
 
-The resulting text is a nearly perfect transcription, despite the garbled inputs! The `text2data::clean_ocr()` function performs these steps in a single function call.
-
-```{r, echo = TRUE, eval = FALSE}
-cleaned_text <- clean_ocr(text)
-
-cat(cleaned_text)
-```
-
-```{r, echo = FALSE, eval = FALSE}
-cleaned_text <- clean_ocr(text)
-
-save(cleaned_text, file = 'data/gpt-3-outputs/titanic-text2data.RData')
-```
-
-```{r, echo = FALSE, eval = TRUE}
-load('data/gpt-3-outputs/titanic-text2data.RData')
-
-cat(cleaned_text)
-```
-
+The resulting text is a nearly perfect transcription, despite the garbled inputs!
 
 ## Text To Data
 
@@ -448,8 +439,7 @@ When we submit this prompt to ChatGPT, it yields a data table delimited by verti
 prompt <- 'Create a data table from the following passage.\n---\nThe little dog laughed to see such fun, and the dish ran away with the spoon.\n---\nData Table:\nCharacter | What They Did \n---|---\n'
 
 response <- complete_prompt(prompt, 
-                            max_tokens = 100,
-                            model = 'gpt-3.5-turbo')
+                            max_tokens = 100)
 
 response
 ```
@@ -471,64 +461,12 @@ df <- read_delim(response,
 df
 ```
 
-Formatting this sort of prompt by hand can be tedious and error-prone, so the `parse_text()` function puts all those steps together in a more convenient interface.
-
-```{r, echo = TRUE, eval = FALSE}
-parse_text(instructions = 'Create a data table from the following passage.',
-           text = 'The little dog laughed to see such fun, and the dish ran away with the spoon.',
-           col_names = c('Character', 'What They Did'))
-```
-
-```{r, echo = FALSE, eval = FALSE}
-df <- parse_text(instructions = 'Create a data table from the following passage.',
-           text = 'The little dog laughed to see such fun, and the dish ran away with the spoon.',
-           col_names = c('Character', 'What They Did'))
-
-save(df, file = 'data/gpt-3-outputs/parse2.RData')
-```
-
-```{r, echo = FALSE, eval = TRUE}
-load('data/gpt-3-outputs/parse2.RData')
-
-df
-```
-
-As with classification, more detailed instructions typically yield better completions.
-
-```{r, echo = TRUE, eval = FALSE}
-instructions <- 'Create a data table based on the following passage. The table should include 
-information on (1) the names of the characters, (2) their hair color, and (3) their shoe sizes. 
-Use NA for missing information.'
-
-text <- "Jack and Jill went up the hill to fetch a pail of water. Jack fell down and broke his 
-crown, revealing his stunning golden locks. Investigators on the scene were only able to recover 
-Jack's shoes (size 10) and Jill's shoes (size 8)."
-
-parse_text(text = text,
-           instructions = instructions,
-           col_names = c('Name of Character', 'Hair Color', 'Shoe Size'))
-```
-
-```{r, echo = FALSE, eval = FALSE}
-instructions <- 'Create a data table based on the following passage. The table should include information on (1) the names of the characters, (2) their hair color, and (3) their shoe sizes. Use NA for missing information.'
-
-text <- "Jack and Jill went up the hill to fetch a pail of water. Jack fell down and broke his crown, revealing his stunning golden locks. Investigators on the scene were only able to recover Jack's shoes (size 10) and Jill's shoes (size 8)."
-
-df <- parse_text(text = text,
-           instructions = instructions,
-           col_names = c('Name of Character', 'Hair Color', 'Shoe Size'))
-
-save(df, file = 'data/gpt-3-outputs/parse3.RData')
-```
-
-```{r, echo = FALSE, eval = TRUE}
-load('data/gpt-3-outputs/parse3.RData')
-
-df
-```
-
 ## Practice Problems
 
-1.  Take a sample of the Senate press releases from the [clustering tutorial](clustering.html). Format a few-shot GPT-3 prompt that returns a list of topics. Are the topic labels sensible? Are they similar to what we came up with using unsupervised methods?
+1.  Take a sample of the Senate press releases from the [clustering tutorial](clustering.html). Format a few-shot ChatGPT prompt that returns a list of topics. Are the topic labels sensible? Are they similar to what we came up with using unsupervised methods?
 
-2.  Ask GPT-3 to summarize the remarks on pages 4-5 of the [PDF](img/SOJ.pdf) that you imported in the [OCR practice problems](OCR.html).
+2.  Ask ChatGPT to summarize the remarks on pages 4-5 of the [PDF](img/SOJ.pdf) that you imported in the [OCR practice problems](OCR.html).
+
+## Further Reading
+
+- Ornstein, Blasingame, and Truscott (2025). "How to Train Your Stochastic Parrot: Large Language Models for Political Texts". *Political Science Research & Methods*. [Link](https://www.cambridge.org/core/journals/political-science-research-and-methods/article/how-to-train-your-stochastic-parrot-large-language-models-for-political-texts/8EAA8096779B5C9DDBDF1BFC71C63AEC)

@@ -181,102 +181,55 @@ df |>
 
 In that last clustering exercise, we represented each document as a vector of word counts. This can lead us astray when the documents are very short but our vocabulary is very large. For example, Senator Lautenberg has a number of press releases that I would classify as being about the environment, but the [Bag of Words](bag-of-words.html) has no idea that words like "preservation", "mercury", and "rivers" might belong in the same category. 
 
-When documents are as brief as these press releases, one could potentially represent them with the average [word embedding](word-embeddings.html) of the words in each document. The k-means clustering algorithm then works in the same way, except that it is assigning clusters within a vector space corresponding to the *meaning* of the documents (in a sense) rather than a vector space that's just counting up the frequency of words.
+When documents are as brief as these press releases, one could potentially represent them with [text embeddings](word-embeddings.html). The k-means clustering algorithm then works in the same way, except that it is assigning clusters within a vector space corresponding to the *meaning* of the documents (in a sense) rather than a vector space that's just counting up the frequency of words.
 
-Let's give it a try, shall we? First, get the word embeddings from the `textdata` package.
+Let's give it a try, shall we? First, get the document embeddings for each press release using the `fuzzylink` package.
 
-```{r}
-# get the glove embedding vectors
-glove <- read_table("data/glove.6B/glove.6B.100d.txt", 
-                    col_names = FALSE)
-
-# convert to a matrix (it will make the computation easier)
-vocab <- glove$X1
-
-glove <- glove |>
-  select(X2:X101) |>
-  as.matrix()
-
-rownames(glove) <- vocab
-
-glove[100:120,1:3]
+```{r, eval = FALSE}
+library(fuzzylink)
+document_embeddings <- get_embeddings(df$text)
 ```
 
-Next, we'll tokenize the press releases, removing stop words and keeping only the words available in the GloVe lexicon.
+Now we have a matrix that represents each press release as a 256-dimensional vector. If you'd rather not retrieve that matrix from the OpenAI API yourself, I have it saved on the repository at `data/press-releases/embeddings.RData`.
 
-```{r}
-# get all the press releases and count up the words for each
-tidy_press_releases <- df |>
-  # get rid of the earlier cluster assignments
-  select(-cluster, -date) |>
-  mutate(text = str_replace_all(text,
-                                pattern = '     Senator Frank R  Lautenberg                                                                                                                      Press Release        of        Senator Lautenberg                                                                                ',
-                                replacement = '')) |>
-  # tokenize to the word level
-  unnest_tokens(input = 'text',
-                output = 'word') |>
-  # remove stop words
-  anti_join(get_stopwords()) |>
-  # remove numerals
-  filter(str_detect(word, '[0-9]', negate = TRUE)) |>
-  # remove the words that aren't in the glove lexicon
-  filter(word %in% vocab)
+```{r, echo = FALSE}
+load('../data/press-releases/embeddings.RData')
 ```
 
-Next, compute the average word embedding of each word in the document. I'm going to do it with a `for` loop, because I can't think of a more elegant solution.
-
-```{r, cache = TRUE}
-# create an empty matrix called document embeddings
-document_embeddings <- matrix(nrow = nrow(df),
-                              ncol = 100)
-
-for(i in 1:nrow(df)){
-
-  list_of_words <- tidy_press_releases |>
-    filter(id == i) |>
-    pull(word)
-
-  document_embeddings[i,] <- colMeans(glove[list_of_words,])
-
-}
-
-glimpse(document_embeddings)
-```
-
-Now we have a matrix that represents each press release as a 100-dimensional vector. Using k-means, we will identify 6 clusters that best describe those document vectors.
+Using k-means, we will identify 9 clusters that best describe those document vectors.
 
 ```{r}
+set.seed(42)
 km <- kmeans(x = document_embeddings,
-             centers = 6,
+             centers = 9,
              nstart = 100)
 
-# merge the cluster assignments back with the documents
-cluster_assignments <- tibble(id = 1:558,
-                              cluster = km$cluster)
-
-df <- df |>
-  # remove the earlier cluster assignment from bag of words
-  select(-cluster) |>
-  left_join(cluster_assignments,
-            by = 'id')
+# assign the clusters to the original dataframe
+df$cluster <- as.numeric(km$cluster)
 
 table(df$cluster)
 ```
 
 You'll note, if you're playing along at home, that this line of code was *much* quicker than when we estimated k-means on the 7,073-dimensional bag of words vectors. Let's look at the most over-represented words in each cluster.
 
-```{r}
-
+```{r, message = FALSE, warning = FALSE}
 # a function to get the most over-represented words by cluster
-get_top_words <- function(tidy_press_releases, cluster_of_interest){
-  tidy_press_releases |>
-    count(id, word) |>
-    left_join(cluster_assignments, by = 'id') |>
+get_top_words <- function(df, cluster_of_interest, num_words = 10){
+  df |>
     mutate(in_cluster = if_else(cluster == cluster_of_interest,
                                 'within_cluster', 'outside_cluster')) |>
+    unnest_tokens(output = 'word',
+                  input = 'text') |>
+    # remove stop words
+    anti_join(get_stopwords()) |>
+    # remove numerals
+    filter(str_detect(word, '[0-9]', negate = TRUE)) |>
+    # create word stems
+    mutate(word_stem = wordStem(word)) |>
+    # remove "blank space" token
+    filter(word_stem != '') |>
     # count the words in each cluster
-    group_by(in_cluster, word) |>
-    summarize(n = sum(n)) |>
+    count(in_cluster, word_stem) |>
     pivot_wider(names_from = 'in_cluster',
                 values_from = 'n',
                 values_fill = 0) |>
@@ -285,19 +238,22 @@ get_top_words <- function(tidy_press_releases, cluster_of_interest){
            outside_cluster = outside_cluster / sum(outside_cluster)) |>
     mutate(delta = within_cluster - outside_cluster) |>
     arrange(-delta) |>
-    head(10) |>
-    pull(word)
+    head(num_words) |>
+    pull(word_stem)
 }
 
-get_top_words(tidy_press_releases, 1)
-get_top_words(tidy_press_releases, 2)
-get_top_words(tidy_press_releases, 3)
-get_top_words(tidy_press_releases, 4)
-get_top_words(tidy_press_releases, 5)
-get_top_words(tidy_press_releases, 6)
+get_top_words(df, 1) # trains / ports / transportation
+get_top_words(df, 2) # military / foreign affairs
+get_top_words(df, 3) # terrorism / middle east
+get_top_words(df, 4) # judiciary, but also NFL??
+get_top_words(df, 5) # healthcare and health insurance
+get_top_words(df, 6) # environmental protection
+get_top_words(df, 7) # credit claiming
+get_top_words(df, 8) # tobacco and firearms
+get_top_words(df, 9) # partisan taunting!
 ```
 
-These seem like pretty cohesive categories! And now there's a cluster for press releases about the environment, consistent with my earlier hunch.
+These seem like pretty cohesive categories! And the top words in each cluster seem more likely to share meaning / topic categories. For example, there's now a cluster for press releases about the environment, consistent with my earlier hunch.
 
 ## Practice Problems
 

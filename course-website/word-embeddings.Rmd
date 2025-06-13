@@ -1,7 +1,7 @@
 ---
-title: "Word Embeddings"
+title: "Text Embeddings"
 description: |
-  How to quantify what a word *means*.
+  How to quantify what text *means*.
 bibliography: references.bib
 ---
 
@@ -13,77 +13,54 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 knitr::include_graphics('img/morpheus.jpg')
 ```
 
-Often, we'd like to not only count the frequency of words, but also get a sense of what the words *mean*. In a [bag of words representation](bag-of-words.html), we treat words words like "president" and "executive" as separate indices in a word count vector, implicitly assuming that they have completely unique meanings. But the statistical models we use to understand text data will perform better if words with similar meaning have similar representations. That is the purpose of the word embeddings approach, which represents each word as a vector, encoding the fact that "president" and "executive" have some overlapping meaning by placing their vectors close together.
+Often, we'd like to not only count the frequency of words, but also get a sense of what the words *mean*. In a [bag of words representation](bag-of-words.html), we treat words words like "president" and "executive" as separate indices in a word count vector, implicitly assuming that they have completely unique meanings. But the statistical models we use to understand text data will perform better if words with similar meaning have similar representations. That is the purpose of the **embeddings** approach, which represents each word (or document) as a vector, encoding the fact that "president" and "executive" have some overlapping meaning by placing their vectors close together.
 
-In this exercise, we'll work with a set of pre-trained word embeddings called [GloVe](https://nlp.stanford.edu/projects/glove/). These off-the-shelf word embeddings tend to do a pretty good job at capturing meaning, even for political science specific applications [@rodriguezWordEmbeddingsWhat2021].[^federalist]
+In this exercise, we'll work with a set of pretrained text embeddings from [OpenAI](https://platform.openai.com/docs/guides/embeddings). These off-the-shelf embeddings tend to do a pretty good job at capturing meaning, even for political science specific applications [@rodriguezWordEmbeddingsWhat2021].[^federalist]
 
 [^federalist]: See `code/03_word-embeddings/federalist-embeddings.R` if you are interested in how to train word embeddings on your own corpus.
 
 ```{r}
 library(tidyverse)
 library(tidytext)
-library(text2vec)
+library(fuzzylink)
 ```
 
-For expository purposes, let's download the 100-dimensional word embeddings [here](https://nlp.stanford.edu/data/glove.6B.zip). That link downloads a zipped folder called 'glove.6B/'. Unzip it and make sure it is in your 'data/' folder.
+The [fuzzylink](https://joeornstein.github.io/software/fuzzylink/) R package contains a convenience function called `get_embeddings()` which we will use for this exercise. You will need an account with OpenAI and an API key. Once you have your API key, you should save it to your R environment with the following line of code (pasting in your key):
+
+```
+fuzzylink::openai_api_key('<YOUR API KEY GOES HERE>', install = TRUE)
+```
+
+For more information on setup, see the package documentation.
+
+## Retrieving Embeddings
+
+To retrieve text embeddings, create a list of words you want to embed, and input the list into the `get_embeddings()` funtion. The result is a matrix where each row is a 256-dimensional vector representing its meaning
 
 ```{r}
-glove <- read_table("data/glove.6B/glove.6B.100d.txt", 
-                    col_names = FALSE)
+words <- c('president', 'executive', 'legislative',
+           'judicial', 'banana')
+
+embeddings <- get_embeddings(words)
+
+embeddings['president',]
 ```
 
-Converting this dataframe to a matrix object makes mathematical operations *much* faster.
+It's difficult to visualize and interpret a 256-dimensional vector space, but we can explore which words have similar meaning by looking at their cosine similarity. The `get_similarity_matrix()` function returns cosine similarity for each pair of vectors in an embedding matrix (or a subset of those vectors if you prefer)
 
 ```{r}
-vocab <- glove$X1
+get_similarity_matrix(embeddings)
 
-glove <- glove |>
-  select(X2:X101) |>
-  as.matrix()
-
-rownames(glove) <- vocab
+get_similarity_matrix(embeddings,
+                      'president',
+                      c('executive', 'banana'))
 ```
 
-It's difficult to visualize and interpret a 100-dimensional vector space, but we can explore which words have similar meaning by looking at their cosine similarity. 
-
-```{r}
-# define cosine similarity
-cosine_similarity <- function(x1, x2){
-  sum(x1*x2) / sqrt(sum(x1^2)) / sqrt(sum(x2^2))
-}
-
-cosine_similarity(glove['president',], 
-                  glove['executive',])
-
-cosine_similarity(glove['president',], 
-                  glove['legislative',])
-
-cosine_similarity(glove['president',], 
-                  glove['judicial',])
-```
-
-By looking at a word's "nearest neighbors" in GLoVe-space, we can get a sense of its meaning. The following function, adapted from [Emil Hvitfeldt and Julia Silge](https://smltar.com/embeddings.html), performs that computation.
-
-```{r}
-nearest_glove_neighbors <- function(word, n = 100){
-  sim2(x = glove,
-     y = glove[word, , drop = FALSE],
-     method = 'cosine',
-     norm = 'l2')[,1] |>
-  sort(decreasing = TRUE) |>
-  head(n)
-}
-```
-
-What words are most closely associated with the word "democracy"?
-
-```{r, cache = TRUE}
-nearest_glove_neighbors('democracy')
-```
+This is how large language models like ChatGPT encode meaning, and it seems to do a pretty good job! Pairs of words with similar meaning have higher cosine similarity scores. In the next module we'll explore how to use these embedding representations to fit models for discovery, prediction, measurement, and inference.
 
 ## Practice Problems
 
-1.  Explore some of the stereotypes reflected in the GloVe embeddings. How close is the word "professor" to female names compared to male names? Hispanic names?
+1.  Explore some of the stereotypes reflected in the OpenAI embeddings. How close is the word "professor" to female names compared to male names? Hispanic names?
 2.  What about words that are ambiguous without context, like "bill" or "share"? What are their nearest neighbors?
 
 ## Further Reading
