@@ -1,5 +1,6 @@
 # scrape bill summaries from the Congress API with httr2
 library(httr2)
+library(tidyverse)
 
 api_key <- read_file('congress-api-key.txt')
 
