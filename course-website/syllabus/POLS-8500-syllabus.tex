@@ -19,7 +19,7 @@
 \fancyhf{}
 \lhead{ \fancyplain{}{Text As Data} }
 %\chead{ \fancyplain{}{} }
-\rhead{ \fancyplain{}{Maymester 2023} }%\today
+\rhead{ \fancyplain{}{Maymester 2026} }%\today
 %\rfoot{\fancyplain{}{page \thepage\ of \pageref{LastPage}}}
 \fancyfoot[RO, LE] {page \thepage\ of \pageref{LastPage} }
 \thispagestyle{plain}
@@ -71,15 +71,15 @@ morekeywords={__global__, __device__},  % CUDA specific keywords
 {\Large \textsc{POLS 8500: Text As Data}}
 \end{center}
 \begin{center}
-{\large Maymester 2023}
+{\large Maymester 2026}
 \end{center}
 
 \begin{center}
 \rule{6.5in}{0.4pt}
 \begin{minipage}[t]{.96\textwidth}
 \begin{tabular}{llcccll}
-\textbf{Professor:} & Joe Ornstein & & &  & \textbf{Time:} & MTWThF 1:00pm -- 3:45pm \\
-\textbf{Email:} &  \href{mailto:jornstein@uga.edu}{jornstein@uga.edu} & & & & \textbf{Place:} & 101D Baldwin Hall\\
+\textbf{Professor:} & Joe Ornstein & & &  & \textbf{Time:} & MTWThF 12:30pm -- 3:15pm \\
+\textbf{Email:} &  \href{mailto:jornstein@uga.edu}{jornstein@uga.edu} & & & & \textbf{Place:} & 101B Baldwin Hall\\
 \textbf{Website:} & \href{https://joeornstein.github.io/text-as-data/}{joeornstein.github.io/text-as-data/} & & & & &
 \end{tabular}
 \end{minipage}
@@ -92,7 +92,7 @@ morekeywords={__global__, __device__},  % CUDA specific keywords
 
 \noindent So much information about our political world is stored not in tidy datasets, but in \textit{texts}. Party manifestos, social media posts, city council minutes, email correspondence, treaties, ordinances, judicial decisions, presidential debates, Congressional speeches....the practice of politics in its myriad forms ultimately comes to be recorded in words on a page. How do we take all this unstructured text, far too extensive for any one researcher to read, and convert it into useful information for scientific inquiry?
 
-In this class we will explore the cutting edge of ``text-as-data'', with a focus on how to retrieve, represent, and analyze political texts as part of a research project. We will aim to cover both the conceptual and the practical, spending class time writing code to replicate and extend significant results from the past decade of political science research. 
+In this class we will explore the cutting edge of ``text-as-data'', with a focus on how to retrieve, represent, and analyze political texts as part of a research project. We will aim to cover both the conceptual and the practical, spending class time writing code to replicate and extend significant results from the past decade of political science research.
 
 %\begin{figure}[h]
 %	\centering
@@ -108,7 +108,7 @@ In this class we will explore the cutting edge of ``text-as-data'', with a focus
 
 \section*{Course Prerequisites and Objectives}
 %\vskip.15in
-%\noindent\textbf{Course Objectives:}  
+%\noindent\textbf{Course Objectives:}
 I will assume that before taking this course you have taken POLS 7012 and 7014 or their equivalents (introduction to statistics and linear regression) and that you are familiar with the basics of the \texttt{R} programming language. By the end of this course, you will be able to:
 \begin{itemize}
 	\item Retrieve and clean text data from a variety of sources
@@ -119,10 +119,10 @@ I will assume that before taking this course you have taken POLS 7012 and 7014 o
 
 \section*{Assignments \& Grading}
 
-There will be daily coding activities in class designed to apply the concepts we learn to practical research problems. Your grade will be based on the successful completion of these assignments. 
+There will be daily coding activities in class designed to apply the concepts we learn to practical research problems. Your grade will be based on the successful completion of these assignments.
 
 %\vskip.15in
-%\noindent\textbf{Office Hours:} 
+%\noindent\textbf{Office Hours:}
 \section*{Office Hours}
 
 Since we're meeting for 3 hours every day, I will not hold formal office hours, but I will generally be available before and after class to discuss questions and will respond to emails from 9am to 4pm.
@@ -136,7 +136,7 @@ For our tour through the world of text as data, we will rely on two textbooks. T
 \begin{itemize}
 \item Grimmer, Justin, Brandon M. Stewart, and Margaret E. Roberts. \textit{Text As Data: A New Framework for Machine Learning and the Social Sciences.} Princeton University Press, 2022.
 \item \href{https://www.tidytextmining.com/index.html}{Silge, Julia, and David Robinson. \textit{Text Mining with R: A Tidy Approach.} First edition. O’Reilly, 2017.}
-\end{itemize} 
+\end{itemize}
 
 
 
@@ -246,56 +246,46 @@ Please read and markup these readings before class each day.
 \end{itemize}
 
 
+\subsection*{Day 11-13: Large Language Models}
 
-\subsection*{Day 11: Crowd-Coding}
+\textit{Take a massive semi-supervised neural network, train it on the entire Internet, and see what happens. How do we make principled use of these things for social science measurement?}
 
-\textit{What if we let other people do the hand-coding? MTurk, SentimentIt}
+\begin{itemize}
+	\item GSR Section 8.5
+	\item Ornstein, Joseph T., Elise N. Blasingame, and Jake S. Truscott. “How to Train Your Stochastic Parrot: Large Language Models for Political Texts.” \textit{Political Science Research and Methods} 13, no. 2 (2025): 264–81.
+	\item Halterman, Andrew, and Katherine A. Keith. “Codebook LLMs: Evaluating LLMs as Measurement Tools for Political Science Concepts.” \textit{Political Analysis}, 2025, 1–17.
+	 %\href{https://dugas.ch/artificial_curiosity/GPT_architecture.html}{GPT-3 On A Napkin} (optional, for a deeper dive into how large language models work).
+%	\item Alexander, Scott. 2019. \href{https://slatestarcodex.com/2019/02/19/gpt-2-as-step-toward-general-intelligence/}{``GPT-2 As Step Toward General Intelligence.''} \textit{Slate Star Codex}.
+%	\item Alexander, Scott. 2020. \href{https://slatestarcodex.com/2020/06/10/the-obligatory-gpt-3-post/}{``The Obligatory GPT-3 Post.''} \textit{Slate Star Codex.}
+
+\end{itemize}
+
+\subsection*{Day 14: Pairwise Comparisons}
+
+\textit{A principled approach to estimating latent scales from text.}
 
 \begin{itemize}
 	\item GSR Chapter 18
 	\item Carlson, David, and Jacob M. Montgomery (2017). ``A Pairwise Comparison Framework for Fast, Flexible, and Reliable Human Coding of Political Texts.'' \textit{American Political Science Review} 111, no. 4: 835–43.
+	\item Licht, Hauke, Rupak Sarkar, Patrick Y. Wu, et al. “Measuring Scalar Constructs in Social Science with LLMs.” In \textit{Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing}, 2025.
+	\item Ornstein, Joseph T. (2026). ``Estimating Latent Quantities from Pretrained Text Embeddings'', \textit{Working Paper}.
 	
 \end{itemize}
 
-\subsection*{Day 12: Supervised Learning, Part 2}
-
-\textit{Naive Bayes, Regularization, Ensembles}
-
-\begin{itemize}
-	\item GSR Chapter 19
-\end{itemize}
-
-\subsection*{Day 13-14: Large Language Models}
-
-\textit{Here we bring it all together. Take a massive semi-supervised neural network, train it on the entire Internet, and see what happens.}
-
-\begin{itemize}
-	\item GSR Section 8.5
-	\item Ornstein, Blasingame, and Truscott (2023). \href{https://joeornstein.github.io/publications/ornstein-blasingame-truscott.pdf}{``How To Train Your Stochastic Parrot: Large Language Models for Political Texts.''} \textit{Working Paper}.
-	\item \href{https://dugas.ch/artificial_curiosity/GPT_architecture.html}{GPT-3 On A Napkin} (optional, for a deeper dive into how large language models work).
-%	\item Alexander, Scott. 2019. \href{https://slatestarcodex.com/2019/02/19/gpt-2-as-step-toward-general-intelligence/}{``GPT-2 As Step Toward General Intelligence.''} \textit{Slate Star Codex}.
-%	\item Alexander, Scott. 2020. \href{https://slatestarcodex.com/2020/06/10/the-obligatory-gpt-3-post/}{``The Obligatory GPT-3 Post.''} \textit{Slate Star Codex.}
-		
-\end{itemize}
-
-\subsection*{Day 15: Bonus Day}
-
-\textit{Catch-up and Topics By Popular Demand}
-
 %\section*{Academic Honesty}
 %
-%Remember that when you joined the University of Georgia community, you agreed to abide by a code of conduct outlined in the academic honesty policy called \href{https://honesty.uga.edu/Academic-Honesty-Policy/Introduction/}{\textit{A Culture of Honesty}}. 
+%Remember that when you joined the University of Georgia community, you agreed to abide by a code of conduct outlined in the academic honesty policy called \href{https://honesty.uga.edu/Academic-Honesty-Policy/Introduction/}{\textit{A Culture of Honesty}}.
 
 \section*{Mental Health and Wellness Resources}
 
 \begin{itemize}
-\item If you or someone you know needs assistance, you are encouraged to contact Student Care and Outreach in the Division of Student Affairs at 706-542-7774 or visit \href{https://sco.uga.edu}{https://sco.uga.edu}. They will help you navigate any difficult circumstances you may be facing by connecting you with the appropriate resources or services. 
-\item UGA has several resources for a student seeking \href{https://www.uhs.uga.edu/bewelluga/bewelluga}{mental health services} or \href{https://www.uhs.uga.edu/info/emergencies}{crisis support}. 
+\item If you or someone you know needs assistance, you are encouraged to contact Student Care and Outreach in the Division of Student Affairs at 706-542-7774 or visit \href{https://sco.uga.edu}{https://sco.uga.edu}. They will help you navigate any difficult circumstances you may be facing by connecting you with the appropriate resources or services.
+\item UGA has several resources for a student seeking \href{https://www.uhs.uga.edu/bewelluga/bewelluga}{mental health services} or \href{https://www.uhs.uga.edu/info/emergencies}{crisis support}.
 \item If you need help managing stress anxiety, relationships, etc., please visit \href{https://www.uhs.uga.edu/bewelluga/bewelluga}{BeWellUGA} for a list of FREE workshops, classes, mentoring, and health coaching led by licensed clinicians and health educators in the University Health Center.
 \item Additional resources can be accessed through the UGA App.
 \end{itemize}
 
 
 
-%%%%%% THE END 
-\end{document} 
+%%%%%% THE END
+\end{document}
