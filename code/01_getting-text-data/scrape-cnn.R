@@ -23,7 +23,3 @@ urls <- c('https://www.cnn.com/2026/05/13/economy/us-ppi-wholesale-inflation-apr
           'https://www.cnn.com/2026/05/13/politics/taiwan-anxiously-eyes-trumps-summit-in-china-with-usd14-billion-in-us-arms-sales-up-in-the-air')
 
 articles <- map_chr(urls, scrape_cnn_article)
-
-
-
-
