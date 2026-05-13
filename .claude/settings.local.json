@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.electionreturns.pa.gov)",
+      "Bash(Rscript code/01_getting-text-data/scrape-cnn-ppi.R)"
+    ]
+  }
+}
