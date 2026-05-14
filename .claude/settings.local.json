@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:www.electionreturns.pa.gov)",
-      "Bash(Rscript code/01_getting-text-data/scrape-cnn-ppi.R)"
+      "Bash(Rscript code/01_getting-text-data/scrape-cnn-ppi.R)",
+      "Bash(mkdir -p data/raw)",
+      "Bash(Rscript code/01_getting-text-data/reddit-api.R)",
+      "Bash(Rscript -e ' *)"
     ]
   }
 }

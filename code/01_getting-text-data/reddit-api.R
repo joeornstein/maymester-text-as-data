@@ -27,7 +27,7 @@ library(jsonlite)
 # so we have to identify ourselves. Use something descriptive --
 # Reddit's API rules ask for "<platform>:<app-name>:<version> (by /u/<your-username>)".
 
-ua <- user_agent('r-script:uga-maymester-text-as-data:v1 (by /u/your-reddit-username)')
+ua <- user_agent('r-script:uga-maymester-text-as-data:v1 (by /u/Confident_Hold_6863)')
 
 # Let's grab the 100 most recent posts mentioning "inflation"
 # from r/economics. The query string mirrors the search box on
@@ -46,14 +46,15 @@ content <- response$content |>
   rawToChar() |>
   fromJSON(flatten = TRUE)
 
-# The interesting stuff lives in content$data$children$data.
-# Each row is one post.
-posts <- content$data$children$data |>
+# The interesting stuff lives in content$data$children.
+# Each row is one post; flatten=TRUE adds a "data." prefix to every column.
+posts <- content$data$children |>
+  rename_with(~ sub("^data\\.", "", .x)) |>
   as_tibble() |>
   select(id, created_utc, author, subreddit, title, selftext, score, num_comments, permalink) |>
   mutate(created = as.POSIXct(created_utc, origin = '1970-01-01', tz = 'UTC'),
          # posts have both a title and a body (selftext); paste them together
-         text = paste(title, selftext))
+         text = ifelse(selftext == "" | selftext == "[removed]", title, paste(title, selftext)))
 
 # save the raw pull so we don't have to re-hit the API every time
 save(posts, file = 'data/raw/reddit-inflation.RData')
@@ -61,14 +62,11 @@ save(posts, file = 'data/raw/reddit-inflation.RData')
 
 # Step 2: Wrap it in a function -----------------------------
 
-# Same pattern as the Congress API tutorial: now that the recipe
-# works, generalize it so we can search any subreddit for any term.
-
 get_reddit_posts <- function(query,
                              subreddit = 'all',
                              sort = 'new',
                              limit = 100,
-                             ua = user_agent('r-script:uga-maymester:v1 (by /u/your-username)')){
+                             ua = user_agent('r-script:uga-maymester:v1 (by /u/Confident_Hold_6863)')){
 
   url <- paste0('https://www.reddit.com/r/', subreddit,
                 '/search.json?q=', URLencode(query),
@@ -84,42 +82,60 @@ get_reddit_posts <- function(query,
     rawToChar() |>
     fromJSON(flatten = TRUE)
 
-  content$data$children$data |>
+  children <- content$data$children
+  if (!is.data.frame(children)) stop("Unexpected response structure -- possibly rate-limited.")
+
+  children |>
+    rename_with(~ sub("^data\\.", "", .x)) |>
     as_tibble() |>
     select(id, created_utc, author, subreddit, title, selftext, score, num_comments, permalink) |>
     mutate(created = as.POSIXct(created_utc, origin = '1970-01-01', tz = 'UTC'),
-           text = paste(title, selftext))
+           text = ifelse(selftext == "" | selftext == "[removed]", title, paste(title, selftext)))
 }
 
 # now we can pull from anywhere with one line
-econ_posts    <- get_reddit_posts('inflation', subreddit = 'economics')
+econ_posts     <- get_reddit_posts('inflation', subreddit = 'economics')
 politics_posts <- get_reddit_posts('inflation', subreddit = 'politics')
 
 
-# Step 3: Sentiment Analysis --------------------------------
+# Step 3: Pull comments for a post -----------------------------
 
-# This is identical to the old twitter-api.R pipeline -- the
-# tokenize -> join -> count flow doesn't care where the text
-# came from.
+# Appending ".json" to any post permalink returns a two-element list:
+#   [[1]] the post itself
+#   [[2]] the comment tree
+# kind == "t1" rows are actual comments; kind == "more" are stubs for
+# collapsed threads that would need extra requests to expand.
 
-tokenized_posts <- econ_posts |>
-  mutate(ID = 1:n()) |>
-  unnest_tokens(input = 'text',
-                output = 'word')
+get_comments <- function(permalink, ua) {
+  empty <- tibble(id = character(), author = character(), body = character(),
+                  score = integer(), created_utc = numeric(),
+                  created = as.POSIXct(numeric(), origin = '1970-01-01'),
+                  permalink = character())
 
-sentiment_scores <- tokenized_posts |>
-  inner_join(get_sentiments('bing')) |>
-  group_by(ID) |>
-  summarize(positive_words = sum(sentiment == 'positive'),
-            negative_words = sum(sentiment == 'negative'),
-            post_sentiment = (positive_words - negative_words) /
-                              (positive_words + negative_words))
+  tryCatch({
+    url <- paste0('https://www.reddit.com', permalink, '.json')
+    response <- GET(url, ua)
+    Sys.sleep(1)
 
-# merge sentiment scores back with the original posts
-econ_posts <- econ_posts |>
-  mutate(ID = 1:n()) |>
-  select(ID, title, text) |>
-  left_join(sentiment_scores, by = 'ID')
+    # fromJSON(flatten=TRUE) combines the two listings (post + comments) into
+    # a 2-row data frame; $data.children[[2]] is the comment listing
+    content <- response$content |>
+      rawToChar() |>
+      fromJSON(flatten = TRUE)
+
+    content$data.children[[2]] |>
+      rename_with(~ sub("^data\\.", "", .x)) |>
+      as_tibble() |>
+      filter(kind == 't1') |>
+      select(id, author, body, score, created_utc) |>
+      mutate(created = as.POSIXct(created_utc, origin = '1970-01-01', tz = 'UTC'),
+             permalink = permalink)
+  }, error = function(e) empty)
+}
+
+# pull comments for every post, then stack into one data frame
+comments <- map(econ_posts$permalink, get_comments, ua = ua) |>
+  list_rbind()
 
 
 # Step 4: A note on the OAuth API ---------------------------

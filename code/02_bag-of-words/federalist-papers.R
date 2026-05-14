@@ -210,6 +210,38 @@ vec2 <- c(1, 2)
 cosine_similarity(vec1, vec2)
 
 
+# compute cosine similarity between authors
+# and disputed papers
+cosine_similarity(hamilton_bag, madison_bag)
+
+disputed_bag <- table(df$word[df$author == 'Hamilton Or Madison'])
+disputed_bag
+
+cosine_similarity(hamilton_bag, disputed_bag)
+cosine_similarity(madison_bag, disputed_bag)
+
+
+## try expanding the dictionary a bit
+vocabulary <- c('upon', 'therefore', 'within',
+                'although', 'consequently', 'besides',
+                'by', 'whilst', 'eeeeeeeeeeeeeeeeeek')
+
+# filter our dataset to just include those vocabulary
+# words
+df <- tidy_federalist |>
+  filter(word %in% vocabulary) |>
+  mutate(word = factor(word))
+
+# create three bags of words, one per author
+hamilton_bag <- table(df$word[df$author == 'Hamilton'])
+madison_bag <- table(df$word[df$author == 'Madison'])
+jay_bag <- table(df$word[df$author == 'Jay'])
+disputed_bag <- table(df$word[df$author == 'Hamilton Or Madison'])
+
+cosine_similarity(hamilton_bag, madison_bag)
+cosine_similarity(hamilton_bag, disputed_bag)
+cosine_similarity(madison_bag, disputed_bag)
+
 
 # compute the cosine similarity for
 # documents we know were written by Jay
