@@ -2,14 +2,40 @@
 library(httr2)
 library(tidyverse)
 
-api_key <- read_file('congress-api-key.txt')
+get_bill_summary <- function(congress = 118,
+                             bill_type = 's',
+                             bill_number = 25){
 
-req <- request(base_url =
-                 paste0('https://api.congress.gov/v3/bill/118/s/25/summaries?api_key=', api_key))
-response <- req_perform(req)
+  # get the API key from R environment
+  api_key <- Sys.getenv('CONGRESS_API_KEY')
 
-content <- resp_body_json(response)
+  # format the API request URL
+  req <- request(base_url =
+                   paste0('https://api.congress.gov/v3/bill/',
+                   congress,'/',bill_type, '/',
+                   bill_number, '/summaries?api_key=', api_key))
 
-content$summaries[[1]]$text |>
-  rvest::read_html() |>
-  rvest::html_text()
+  # perform the request
+  response <- req_perform(req)
+
+  # convert to text
+  content <- resp_body_json(response)
+
+  content$summaries[[1]]$text |>
+    rvest::read_html() |>
+    rvest::html_text()
+}
+
+get_bill_summary()
+
+get_bill_summary(congress = 118,
+                 bill_type = 'hr',
+                 bill_number = 4818)
+
+
+get_bill_summary(congress = 89,
+                 bill_type = 's',
+                 bill_number = 1564)
+
+
+

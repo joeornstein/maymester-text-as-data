@@ -19,7 +19,7 @@
 #'     3. Save and restart R
 #'   Then retrieve it in any script with Sys.getenv() (see below).
 #'
-#' author: Joe Ornstein
+#' author: Joe Ornstein & Claude
 #' date: 2026-05-14
 #' ---
 
@@ -35,7 +35,7 @@ api_key <- Sys.getenv('YOUTUBE_API_KEY')
 # Each page holds up to 100 comments; the response includes a nextPageToken
 # when more pages exist.
 
-video_id <- 'dQw4w9WgXcQ'   # replace with any public YouTube video ID
+video_id <- '6Zy5VLcEbZc'   # replace with any public YouTube video ID
 
 req <- request('https://www.googleapis.com/youtube/v3/commentThreads') |>
   req_url_query(
