@@ -5,7 +5,9 @@
       "Bash(Rscript code/01_getting-text-data/scrape-cnn-ppi.R)",
       "Bash(mkdir -p data/raw)",
       "Bash(Rscript code/01_getting-text-data/reddit-api.R)",
-      "Bash(Rscript -e ' *)"
+      "Bash(Rscript -e ' *)",
+      "Bash(Rscript \"code/11_large-language-models/ellmer-election-data.R\")",
+      "Bash(python3 *)"
     ]
   }
 }

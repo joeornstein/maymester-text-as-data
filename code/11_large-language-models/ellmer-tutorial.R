@@ -14,7 +14,8 @@ library(ellmer)
 ## 1. A simple chat -----------------------
 
 # Create a chat object. It handles the endpoint, auth, and message history.
-chat <- chat_openai(model = 'gpt-5.4-mini')
+chat <- chat_openai(model = 'gpt-5.4-mini',
+                    system_prompt = 'You are an expert political scientist.')
 
 chat$chat('What is the capital of Japan?')
 
@@ -23,17 +24,34 @@ chat$chat('What is the capital of Japan?')
 chat$chat('What is the population of that city?')
 
 
-## 2. OCR an image ----------------
+## 2. Submit multiple prompts in parallel -----------------
+
+countries <- c('Japan', 'United States', 'Peru', 'Brazil',
+               'Canada', 'Georgia', 'Argentina')
+
+prompts <- interpolate('What is the capital of {{countries}}?')
+
+chat <- chat_openai(model = 'gpt-5.4-mini',
+                    system_prompt = 'Return the name of the capital *only*...please.')
+capitals <- parallel_chat_text(chat, prompts)
+capitals
+
+
+## 3. OCR an image ----------------
 
 # ellmer has built-in helpers for image and file input
 
-chat <- chat_openai(model = 'gpt-5.4')
+chat <- chat_openai(model = 'gpt-5.4',
+                    system_prompt = 'Only return the transcription, please.')
 
 # from a local file:
-chat$chat(
-  content_image_file('data/img/titanic.png'),
-  'Convert this article to plain text. Ignore advertisements, tables, and anything otherwise not included in the article.'
+resp <- chat$chat(
+  content_image_file('data/img/titanic.png', resize = 'high'),
+  'Please convert this entire article to plain text. Ignore advertisements, insets, tables, and anything otherwise not part of the article.'
 )
+
+resp
+
 
 # from a URL (just as easy):
 chat$chat(
