@@ -84,43 +84,8 @@ chat5 <- chat_anthropic(model = 'claude-sonnet-4-6',
 
 results_claude <- chat5$chat_structured(
   content_image_file(img_path, resize = 'high'),
+  #content_pdf_url(url),
   'Extract every row from the county-level vote totals table in this image.
    Include all candidates as columns. Use 0 if a candidate has no votes listed.',
   type = type_array(county_type)
 )
-
-
-## 4. One county at a time (most reliable, most expensive) ----------------
-# Each call is a simpler task: find one row instead of the whole table.
-# We use the county names extracted above as the query list.
-
-counties <- sapply(results_claude, `[[`, 'county')
-
-prompts <- paste0(
-  'This image shows Mississippi 2008 Democratic Primary results. ',
-  'How many votes did each candidate receive in ', counties, ' County? ',
-  'Return only the numbers for that single row.'
-)
-
-# Create one fresh chat per county so histories don't bleed across calls
-chats <- lapply(seq_along(counties), function(i) {
-  chat_anthropic(model = 'claude-sonnet-4-6',
-                 params = params(temperature = 0))
-})
-
-# parallel_chat_text() sends all prompts concurrently
-# We attach the image to each prompt via a list of content objects
-prompts_with_image <- lapply(seq_along(counties), function(i) {
-  list(content_image_file(img_path, resize = 'high'), prompts[i])
-})
-
-results_parallel <- mapply(function(ch, prompt_list) {
-  ch$chat_structured(
-    prompt_list[[1]],
-    prompt_list[[2]],
-    type = county_type
-  )
-}, chats, prompts_with_image, SIMPLIFY = FALSE)
-
-results_parallel_df <- do.call(rbind, lapply(results_parallel, as.data.frame))
-results_parallel_df
