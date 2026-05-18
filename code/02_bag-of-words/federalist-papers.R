@@ -79,6 +79,8 @@ likelihood_madison <- dmultinom(fed50_bag,
 likelihood_jay <- dmultinom(fed50_bag,
                                  prob = jay_bag)
 
+likelihood_madison / likelihood_hamilton
+
 ## Validation, Validation, Validation ----------
 
 # if our model is a good model,
@@ -128,7 +130,7 @@ predict_author <- function(title, vocabulary){
 
   if(hamilton_likelihood > jay_likelihood &
      hamilton_likelihood > madison_likelihood){
-    return('Hamilton!')
+    return('Hamilton')
     #print(paste0(round(hamilton_likelihood / madison_likelihood,2),
     #             ' times more likely than Madison.'))
     #print(paste0(round(hamilton_likelihood / jay_likelihood,2),
@@ -137,7 +139,7 @@ predict_author <- function(title, vocabulary){
 
   if(madison_likelihood > hamilton_likelihood &
      madison_likelihood > jay_likelihood){
-    return('Madison!')
+    return('Madison')
     #print(paste0(round(madison_likelihood / hamilton_likelihood,2),
     #             ' times more likely than Hamilton.'))
     #print(paste0(round(madison_likelihood / jay_likelihood,2),
@@ -146,7 +148,7 @@ predict_author <- function(title, vocabulary){
 
   if(jay_likelihood > hamilton_likelihood &
      jay_likelihood > madison_likelihood){
-    return('Jay!')
+    return('Jay')
     #print(paste0(round(jay_likelihood / hamilton_likelihood,2),
     #             ' times more likely than Hamilton.'))
     #print(paste0(round(jay_likelihood / madison_likelihood,2),
@@ -154,6 +156,21 @@ predict_author <- function(title, vocabulary){
   }
 
 }
+
+predict_author(title = 'No. II.', vocabulary)
+predict_author(title = 'No. III.', vocabulary)
+predict_author(title = 'No. IV.', vocabulary)
+
+predict_author(title = 'No. X.', vocabulary)
+
+d$predicted_author <- NA
+for(i in 1:nrow(d)){
+  d$predicted_author[i] <- predict_author(title = d$title[i],
+                                          vocabulary)
+}
+
+table(d$author, d$predicted_author)
+
 
 # vocabulary <- c('which', 'people',
 #                 'upon', 'our', 'my', 'should',
