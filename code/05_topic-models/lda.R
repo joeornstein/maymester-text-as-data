@@ -18,19 +18,21 @@ tidy_press_releases <- df |>
   mutate(text = str_replace_all(text,
                                 pattern = '     Senator Frank R  Lautenberg                                                                                                                      Press Release        of        Senator Lautenberg                                                                                ',
                                 replacement = '')) |>
+  # replace "New Jersey" with "NJ" so it appears as the same token
+  mutate(text = str_replace_all(text, 'New Jersey', 'NJ')) |>
   # tokenize to the word level
   unnest_tokens(input = 'text',
                 output = 'word') |>
   # remove stop words
   anti_join(get_stopwords()) |>
   # remove numerals
-  filter(str_detect(word, '[0-9]', negate = TRUE)) |>
+  filter_out(str_detect(word, '[0-9]')) |>
   # create word stems
   mutate(word_stem = wordStem(word)) |>
   # count up bag of word stems
   count(id, word_stem) |>
   # # remove the infrequent word stems
-  # filter(n > 2) |>
+  filter(n > 2) |>
   # remove single-character word stems
   filter(nchar(word_stem) != 1) |>
   # compute tf-idf
@@ -50,7 +52,7 @@ lautenberg_dtm
 
 ## Step 2: Fit the LDA model ----------------------------
 
-lautenberg_lda <- LDA(lautenberg_dtm, k = 20, control = list(seed = 42))
+lautenberg_lda <- LDA(lautenberg_dtm, k = 30, control = list(seed = 42))
 
 
 ## Step 3: Examine the topic-level probability vectors -----------------------
@@ -77,7 +79,7 @@ lautenberg_topics |>
   mutate(delta = beta - average_beta) |>
   # get the words with the largest difference in each topic
   group_by(topic) |>
-  slice_max(delta, n = 15) |>
+  slice_max(delta, n = 10) |>
   # plot it
   ggplot(mapping = aes(x=delta, y=reorder(term, delta))) +
   geom_col() +
@@ -85,6 +87,8 @@ lautenberg_topics |>
   facet_wrap(~topic, scales = 'free') +
   labs(x = 'Term Probability Compared to Average',
        y = 'Term')
+
+ggsave('topics.png', width = 10, height = 10)
 
 ## Step 4: Examine the document-level probability vectors --------------------------
 
@@ -96,6 +100,6 @@ lautenberg_documents
 
 # what are the most high-probability topics assigned to press release #1?
 lautenberg_documents |>
-  filter(document == 1) |>
+  filter(document == 2) |>
   arrange(-gamma)
 
