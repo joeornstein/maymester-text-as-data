@@ -6,26 +6,30 @@ library(tidyverse)
 
 # create a random set of data
 df <- tibble(
-  x = c(1,2,1,2,4,2, 2.5, 8, 6, 5,4, 7, 9, 6.7, 8, 9),
-  y = c(2,1,2,2.5, 1,4.4, 1, 3, 10, 10, 7, 9, 6, 7, 8, 10)
+  word = c('cat', 'dog', 'puppy', 'kitten', 'FAA', "IRS"),
+  x = c(2,3,4,3, 10, 9),
+  y = c(8,10,9,7,3,2)
 )
 
 ggplot(data = df,
-       mapping = aes(x=x, y=y)) +
-  geom_point(alpha = 0.7)
+       mapping = aes(x=x, y=y, label=word)) +
+  geom_text()
 
 # kmeans is included in the base stats package
-km <- kmeans(x = df,
-             centers = 2)
+points <- cbind(df$x,df$y)
+km <- kmeans(x = points,
+             centers = 3)
 
 km
 
 # visualize the cluster assignments
 df |>
   mutate(cluster_assignment = km$cluster) |>
-  ggplot(mapping = aes(x=x, y=y, color = factor(cluster_assignment))) +
-  geom_point() +
-  theme_minimal()
+  ggplot(mapping = aes(x=x, y=y, label = word,
+                       color = factor(cluster_assignment))) +
+  geom_text() +
+  theme_minimal() +
+  theme(legend.position = 'none')
 
 
 
@@ -64,11 +68,15 @@ df |>
 
 # I can't visualize it, but what if we included more information in the
 # clustering algorithm?
-km <- kmeans(x = df |>
-               select(bill_length_mm, flipper_length_mm, bill_depth_mm),
+
+male_penguins <- df |> filter(sex == 'male')
+
+km <- kmeans(x = male_penguins |>
+               select(bill_length_mm, flipper_length_mm,
+                      bill_depth_mm, body_mass_g),
              centers = 3)
 
 # does this do a good job predicting species?
-df |>
+male_penguins |>
   mutate(cluster_assignment = km$cluster) |>
   count(species, cluster_assignment)
