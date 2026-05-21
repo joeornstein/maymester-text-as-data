@@ -47,8 +47,22 @@ df <- data.frame(
 df <- read_csv('data/federalist-papers.csv')
 load('data/federalist-embeddings.RData')
 
+set.seed(4515)
 km <- kmeans(federalist_embeddings,
              centers = 10)
 
 df$cluster_assignment <- km$cluster
+# looks sensible!
 
+cluster_labels <- tribble(~cluster_assignment, ~cluster,
+                          1, 'The Executive',
+                          2, 'Utility of the Union (Revenue & Commerce)',
+                          3, 'Congress',
+                          4, 'General Comments, Insufficiency of Articles of Confederation',
+                          5, 'Common Defense / Militia',
+                          6, 'Judiciary',
+                          7, 'Apportionment',
+                          8, 'Dangers of Dissension and Foreign Force',
+                          9, 'Separation of Powers',
+                          10, 'Taxation and Revenue')
+df <- left_join(df, cluster_labels)
