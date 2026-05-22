@@ -26,9 +26,10 @@ if(file.exists('data/anes/mip-embeddings.RData')){
 # fit k-means with a variety of k values ------------
 
 set.seed(6201)
-k_range <- 2:20
+k_range <- 2:30
 
-km_fits <- map(k_range, \(k) kmeans(emb, centers = k))
+km_fits <- map(k_range, \(k) kmeans(emb, centers = k,
+                                    iter.max = 25))
 
 tibble(
   k        = k_range,
@@ -51,6 +52,8 @@ head(as.numeric(km$cluster))
 df$cluster <- km$cluster
 
 # sample the responses that are closest to the centroid in each cluster to label topics ------------
+
+# i.e. choose the most "prototypical" documents
 
 dists <- sqrt(rowSums((emb - km$centers[km$cluster, ])^2))
 
@@ -75,21 +78,24 @@ df |>
 
 # after reviewing, assign topic labels here
 cluster_labels <- c(
-  "1"  = "",
-  "2"  = "",
-  "3"  = "",
-  "4"  = "",
-  "5"  = "",
-  "6"  = "",
-  "7"  = "",
-  "8"  = "",
-  "9"  = "",
-  "10" = "",
-  "11" = "",
-  "12" = ""
+  "1"  = "Government Finances",
+  "2"  = "Violence",
+  "3"  = "Women's Rights",
+  "4"  = "Immigration",
+  "5"  = "Democracy",
+  "6"  = "Climate Change/War/IDK/Potpourri",
+  "7"  = "Division",
+  "8"  = "Poverty/Inequality",
+  "9"  = "Inflation",
+  "10" = "Cost Of Living",
+  "11" = "Trump/Biden",
+  "12" = "Economy"
 )
 
 df$cluster_label <- cluster_labels[as.character(df$cluster)]
+
+
+
 
 
 
