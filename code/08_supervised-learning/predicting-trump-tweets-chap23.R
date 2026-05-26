@@ -40,7 +40,6 @@ tweets |>
   theme_minimal()
 
 
-
 # pick the words to keep as predictors
 words_to_keep <- tweets |>
   unnest_tokens(input = '.text',
@@ -48,7 +47,7 @@ words_to_keep <- tweets |>
   count(word) |>
   # remove numerals, URLs
   filter(str_detect(word, '.co|.com|.net|.edu|.gov|http', negate = TRUE)) |>
-  filter(str_detect(word, '[0-9]', negate = TRUE)) |>
+  filter(str_detect(word, '^[0-9][0-9,\\.%]*$', negate = TRUE)) |>
   # remove rare words
   filter(n > 2) |>
   pull(word)
