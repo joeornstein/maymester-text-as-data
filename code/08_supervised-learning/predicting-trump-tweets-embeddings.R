@@ -20,7 +20,8 @@ tweets <- trump_tweets_df |>
 # get_embeddings() (from fuzzylink) sends each tweet to an embedding model and
 # returns a numeric matrix: one row per tweet, one column per embedding
 # dimension. We strip non-UTF-8 characters first to avoid encoding errors.
-clean_text <- iconv(tweets$.text, from = "UTF-8", to = "UTF-8", sub = "") |>
+clean_text <- iconv(tweets$.text, from = "UTF-8", to = "UTF-8",
+                    sub = "") |>
   str_remove_all("[^\x01-\x7F]")
 emb <- get_embeddings(clean_text)
 
@@ -58,6 +59,8 @@ rec <- recipe(.source ~ ., data = train) |>
 lr_spec <- logistic_reg(penalty = tune(), mixture = 1) |>
   set_engine("glmnet") |>
   set_mode("classification")
+# in machine learning world, "classification" means predicting a categorical or binary variable
+# and "regression" means predicting a continuous variable
 
 # ------- Workflow ------------------------------------------------------------
 # A workflow bundles the recipe and the model spec together. This makes it easy
