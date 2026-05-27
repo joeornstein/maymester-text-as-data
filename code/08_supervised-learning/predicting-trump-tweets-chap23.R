@@ -112,7 +112,8 @@ train <- train |>
 
 model1 <- logistic_reg() |>
   fit(formula = .source ~ crooked + dumb + emails +
-        crowds + hillary + winning + weak,
+        crowds + hillary + winning + weak + crookedhillary +
+        sad + obama,
       data = train)
 
 tidy(model1)
