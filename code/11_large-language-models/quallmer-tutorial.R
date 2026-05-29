@@ -38,7 +38,7 @@ mip_codebook <- qlm_codebook(
 
   instructions = paste(
     "Please read the following statement from a respondent in the 2024 ANES survey about the most important problem facing the United States.",
-    "When a response could belong to multiple categories, make your best judgment based on which concern seems to predominate.",
+    "Assign the response to a category. When a response could belong to multiple categories, make your best judgment based on which concern seems to predominate.",
     "",
     "DOMAIN 1. ECONOMY",
     "1A. Cost of Living",
@@ -88,7 +88,8 @@ mip_codebook <- qlm_codebook(
   schema = type_object(
     category = type_enum(
       values = c('cost_of_living', 'poverty_inequality', 'trade_tariffs',
-                 'gov_finance_debt', 'health_of_democracy', 'divisions_polarization',
+                 'gov_finance_debt', 'economic_issues_general',
+                 'health_of_democracy', 'divisions_polarization',
                  'democrats', 'republicans', 'crime_violence', 'womens_rights_abortion',
                  'immigration', 'climate_change', 'education', 'other_social',
                  'foreign_affairs', 'other', 'unknown'),
@@ -119,12 +120,25 @@ coded_responses_anthropic <- qlm_code(
 coded_responses_gpt <- qlm_code(
   df_subset$post_mip_most_important,
   codebook = mip_codebook,
-  model = 'gpt-5.4-mini',
+  model = 'openai/gpt-5.4-mini',
   name = 'gpt_mip_coding_subset',
   notes = 'GPT-5.4-mini coding of a random sample of 100 responses'
 )
 
 
+# assess intercoder reliability
+qlm_compare(coded_responses_gpt, coded_responses_anthropic)
+
+
+df_subset$anthropic_label <- coded_responses_anthropic$category
+df_subset$gpt_label <- coded_responses_gpt$category
+
+df_subset |>
+  select(post_mip_most_important, anthropic_label, gpt_label) |>
+  View()
+
+save(coded_responses_gpt, coded_responses_anthropic,
+     file = "data/anes/quallmer-subset.RData")
 
 
 
