@@ -88,13 +88,13 @@ measurement_set |>
 
 # after reviewing, assign topic labels here
 cluster_labels <- c(
-  "1"  = "Uncertain, Nonsensical, or Positive",
+  "1"  = "Uncertain, Nonsensical, or Vaguely Positive",
   "2"  = "Path to Citizenship",
   "3"  = "Straight to Jail",
   "4"  = "No Prison",
   "5"  = "Prison And/Or Deported",
   "6"  = "Deported",
-  "7"  = "Deported (Because of Costs)",
+  "7"  = "Concerns about costs",
   "8"  = "Deported",
   "9"  = "Punish to full extent of the law",
   "10" = "Deported",
