@@ -125,19 +125,33 @@ coded_responses_gpt <- qlm_code(
   notes = 'GPT-5.4-mini coding of a random sample of 100 responses'
 )
 
+# coding responses with local open-source LLM
+# see 'llama.R' in this folder for setup instructions
+coded_responses_llama <- qlm_code(
+  df_subset$post_mip_most_important,
+  codebook = mip_codebook,
+  model = 'ollama/llama3.2:1b',
+  name = 'llama_mip_coding_subset',
+  notes = 'Llama 3.2:1B coding of a random sample of 100 responses'
+)
+
 
 # assess intercoder reliability
-qlm_compare(coded_responses_gpt, coded_responses_anthropic)
+qlm_compare(coded_responses_gpt, coded_responses_anthropic,
+            coded_responses_llama)
 
 
 df_subset$anthropic_label <- coded_responses_anthropic$category
 df_subset$gpt_label <- coded_responses_gpt$category
+df_subset$llama_label <- coded_responses_llama$category
 
 df_subset |>
-  select(post_mip_most_important, anthropic_label, gpt_label) |>
+  select(post_mip_most_important, anthropic_label,
+         gpt_label, llama_label) |>
   View()
 
 save(coded_responses_gpt, coded_responses_anthropic,
+     coded_responses_llama,
      file = "data/anes/quallmer-subset.RData")
 
 
